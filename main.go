@@ -303,6 +303,7 @@ var remove = &cli.Command{
 type listT struct {
 	cli.Helper
 	Config
+	NoHeader bool `cli:"no-header" usage:"don't print header line" dft:"false"`
 }
 
 var list = &cli.Command{
@@ -321,7 +322,7 @@ var list = &cli.Command{
 	},
 
 	Fn: func(ctx *cli.Context) error {
-		//argv := ctx.Argv().(*listT)
-		return box.List(ctx)
+		argv := ctx.Argv().(*listT)
+		return box.List(ctx, argv.NoHeader)
 	},
 }

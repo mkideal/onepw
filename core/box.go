@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -204,15 +205,17 @@ func (box *Box) find(cond func(*Password) bool) []*Password {
 	return ret
 }
 
-func (box *Box) List(w io.Writer) error {
+func (box *Box) List(w io.Writer, noHeader bool) error {
 	box.RLock()
 	defer box.RUnlock()
 	if box.masterPassword == "" {
 		return ErrEmptyMasterPassword
 	}
 	format := "%-10s%-15s%-16s%-16s%-20s"
-	fmt.Fprintf(w, format, "ID", "LABEL", "ACCOUNT", "PASSWORD", "UPDATED_AT")
-	w.Write([]byte{'\n'})
+	if !noHeader {
+		fmt.Fprintf(w, format, "ID", "LABEL", "ACCOUNT", "PASSWORD", "UPDATED_AT")
+		w.Write([]byte{'\n'})
+	}
 	for _, pw := range box.passwords {
 		pw.Brief(w, format)
 		w.Write([]byte{'\n'})
@@ -240,6 +243,7 @@ func (box *Box) marshal() ([]byte, error) {
 		}
 		passwords = append(passwords, *pw)
 	}
+	sort.Stable(passwordSlice(passwords))
 	return json.MarshalIndent(passwords, "", "    ")
 }
 
@@ -316,3 +320,10 @@ func (box *Box) DecryptAll(masterPassword string) error {
 	}
 	return box.save()
 }
+
+// sort passwords by Id
+type passwordSlice []Password
+
+func (ps passwordSlice) Len() int           { return len(ps) }
+func (ps passwordSlice) Less(i, j int) bool { return ps[i].Id < ps[j].Id }
+func (ps passwordSlice) Swap(i, j int)      { ps[i], ps[j] = ps[j], ps[i] }
