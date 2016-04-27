@@ -258,9 +258,10 @@ type removeT struct {
 }
 
 var remove = &cli.Command{
-	Name: "remove",
-	Desc: "remove passwords",
-	Argv: func() interface{} { return new(removeT) },
+	Name:    "remove",
+	Aliases: []string{"rm", "del", "delete"},
+	Desc:    "remove passwords",
+	Argv:    func() interface{} { return new(removeT) },
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*removeT)
@@ -305,9 +306,10 @@ type listT struct {
 }
 
 var list = &cli.Command{
-	Name: "list",
-	Desc: "list all passwords",
-	Argv: func() interface{} { return new(listT) },
+	Name:    "list",
+	Aliases: []string{"ls"},
+	Desc:    "list all passwords",
+	Argv:    func() interface{} { return new(listT) },
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*listT)
