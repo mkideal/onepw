@@ -2,7 +2,10 @@
 
 onepw is a command line tool for managing passwords
 
-Usage: onepw <COMMAND> [OPTIONS]
+Usage:
+```shell
+onepw <COMMAND> [OPTIONS]
+```
 
 Basic workflow:
 
