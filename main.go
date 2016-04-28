@@ -30,19 +30,23 @@ func main() {
 // Config
 //--------
 
+// Configure ...
 type Configure interface {
 	Filename() string
 	MasterPassword() string
 }
 
+// Config implementes Configure interface, represents onepw config
 type Config struct {
 	Master string `cli:"master" usage:"master password" dft:"$PASSWORD_MASTER"`
 }
 
+// Filename returns password data filename
 func (cfg Config) Filename() string {
 	return "password.data"
 }
 
+// MasterPassword returns master password
 func (cfg Config) MasterPassword() string {
 	return cfg.Master
 }
@@ -172,11 +176,11 @@ var initCmd = &cli.Command{
 		}
 		if _, err := os.Lstat(argv.Filename()); err != nil {
 			if os.IsNotExist(err) {
-				if file, err := os.Create(argv.Filename()); err != nil {
+				file, err := os.Create(argv.Filename())
+				if err != nil {
 					return err
-				} else {
-					file.Close()
 				}
+				file.Close()
 			}
 		}
 		return nil

@@ -14,9 +14,8 @@ import (
 	"time"
 
 	"github.com/mkideal/pkg/debug"
+	"github.com/mkideal/pkg/textutil"
 )
-
-const passwordFormat = "%-10s%-15s%-16s%-16s%-20s"
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -35,11 +34,13 @@ func md5sum(i interface{}) string {
 	}
 }
 
+// BoxRepository define repo for storing passwords
 type BoxRepository interface {
 	Load() ([]byte, error)
 	Save([]byte) error
 }
 
+// Box represents password box
 type Box struct {
 	sync.RWMutex
 	masterPassword string
@@ -47,10 +48,11 @@ type Box struct {
 	passwords      map[string]*Password
 }
 
+// Init initialize box with master password
 func (box *Box) Init(masterPassword string) error {
 	//TODO: check masterPassword
 	if len(masterPassword) < 6 {
-		return ErrMasterPasswordTooShort
+		return errMasterPasswordTooShort
 	}
 	box.Lock()
 	defer box.Unlock()
@@ -66,6 +68,7 @@ func (box *Box) Init(masterPassword string) error {
 	return box.save()
 }
 
+// NewBox creates box with repo
 func NewBox(repo BoxRepository) *Box {
 	box := &Box{
 		repo:      repo,
@@ -74,6 +77,7 @@ func NewBox(repo BoxRepository) *Box {
 	return box
 }
 
+// Load loads password box
 func (box *Box) Load() error {
 	box.Lock()
 	defer box.Unlock()
@@ -88,6 +92,7 @@ func (box *Box) load() error {
 	return box.unmarshal(data)
 }
 
+// Save saves password box
 func (box *Box) Save() error {
 	box.Lock()
 	defer box.Unlock()
@@ -103,44 +108,46 @@ func (box *Box) save() error {
 	return box.repo.Save(data)
 }
 
+// Add adds a new password to box
 func (box *Box) Add(pw *Password) (id string, new bool, err error) {
 	debug.Debugf("Add new password: %v", pw)
 	box.Lock()
 	defer box.Unlock()
 	if box.masterPassword == "" {
-		err = ErrEmptyMasterPassword
+		err = errEmptyMasterPassword
 		return
 	}
-	if old, ok := box.passwords[pw.Id]; ok {
+	if old, ok := box.passwords[pw.ID]; ok {
 		old.LastUpdatedAt = time.Now().Unix()
 		old.migrate(pw)
 		pw = old
 		new = false
-	} else if pw.Id != "" {
-		err = newErrPasswordNotFound(pw.Id)
+	} else if pw.ID != "" {
+		err = newErrPasswordNotFound(pw.ID)
 		return
 	} else {
-		id, err = box.allocId()
+		id, err = box.allocID()
 		if err != nil {
 			return
 		}
-		pw.Id = id
+		pw.ID = id
 		new = true
 	}
 	if err = box.encrypt(pw); err != nil {
 		return
 	}
-	box.passwords[pw.Id] = pw
+	box.passwords[pw.ID] = pw
 	debug.Debugf("add new password: %v", pw)
 	err = box.save()
 	return
 }
 
+// Remove removes passwords by ids
 func (box *Box) Remove(ids []string, all bool) ([]string, error) {
 	box.Lock()
 	defer box.Unlock()
 	if box.masterPassword == "" {
-		return nil, ErrEmptyMasterPassword
+		return nil, errEmptyMasterPassword
 	}
 	deletedIds := []string{}
 	passwords := make([]*Password, 0)
@@ -149,8 +156,8 @@ func (box *Box) Remove(ids []string, all bool) ([]string, error) {
 		size := len(deletedIds)
 		if foundPw, ok := box.passwords[id]; !ok {
 			for _, pw := range box.passwords {
-				if strings.HasPrefix(pw.Id, id) {
-					deletedIds = append(deletedIds, pw.Id)
+				if strings.HasPrefix(pw.ID, id) {
+					deletedIds = append(deletedIds, pw.ID)
 					passwords = append(passwords, pw)
 				}
 			}
@@ -175,11 +182,12 @@ func (box *Box) Remove(ids []string, all bool) ([]string, error) {
 	return deleted, box.save()
 }
 
+// RemoveByAccount removes passwords by category and account
 func (box *Box) RemoveByAccount(category, account string, all bool) ([]string, error) {
 	box.Lock()
 	defer box.Unlock()
 	if box.masterPassword == "" {
-		return nil, ErrEmptyMasterPassword
+		return nil, errEmptyMasterPassword
 	}
 	passwords := box.find(func(pw *Password) bool {
 		return pw.Category == category && pw.PlainAccount == account
@@ -192,19 +200,20 @@ func (box *Box) RemoveByAccount(category, account string, all bool) ([]string, e
 	}
 	ids := []string{}
 	for _, pw := range passwords {
-		delete(box.passwords, pw.Id)
-		ids = append(ids, pw.Id)
+		delete(box.passwords, pw.ID)
+		ids = append(ids, pw.ID)
 	}
 	return ids, box.save()
 }
 
+// Clear clear password box
 func (box *Box) Clear() ([]string, error) {
 	box.Lock()
 	defer box.Unlock()
 	ids := make([]string, 0, len(box.passwords))
 	for _, pw := range box.passwords {
-		ids = append(ids, pw.Id)
-		delete(box.passwords, pw.Id)
+		ids = append(ids, pw.ID)
+		delete(box.passwords, pw.ID)
 	}
 	if len(ids) > 0 {
 		return ids, box.save()
@@ -222,20 +231,19 @@ func (box *Box) find(cond func(*Password) bool) []*Password {
 	return ret
 }
 
+// List writes all passwords to specified writer
 func (box *Box) List(w io.Writer, noHeader bool) error {
 	box.RLock()
 	defer box.RUnlock()
 	if box.masterPassword == "" {
-		return ErrEmptyMasterPassword
+		return errEmptyMasterPassword
 	}
+	var table textutil.Table
+	table = passwordSlice(box.sortedPasswords())
 	if !noHeader {
-		fmt.Fprintf(w, passwordFormat, "ID", "CATEGORY", "ACCOUNT", "PASSWORD", "UPDATED_AT")
-		w.Write([]byte{'\n'})
+		table = textutil.AddTableHeader(table, passwordHeader)
 	}
-	for _, pw := range box.sortedPasswords() {
-		pw.Brief(w, passwordFormat)
-		w.Write([]byte{'\n'})
-	}
+	textutil.WriteTable(w, table)
 	return nil
 }
 
@@ -248,7 +256,7 @@ func (box *Box) sortedPasswords() []Password {
 	return passwords
 }
 
-func (box *Box) allocId() (string, error) {
+func (box *Box) allocID() (string, error) {
 	count := 0
 	for count < 10 {
 		id := md5sum(rand.Int63())
@@ -256,7 +264,7 @@ func (box *Box) allocId() (string, error) {
 			return id, nil
 		}
 	}
-	return "", ErrAllocateId
+	return "", errAllocateID
 }
 
 func (box *Box) marshal() ([]byte, error) {
@@ -280,14 +288,14 @@ func (box *Box) unmarshal(data []byte) error {
 	}
 	debug.Debugf("unmarshal result: %v", passwords)
 
-	for i, _ := range passwords {
+	for i := range passwords {
 		pw := &(passwords[i])
 		if box.masterPassword != "" {
 			if err := box.decrypt(pw); err != nil {
 				return err
 			}
 		}
-		box.passwords[pw.Id] = pw
+		box.passwords[pw.ID] = pw
 	}
 	debug.Debugf("load result: %v", box.passwords)
 	return nil
@@ -321,36 +329,45 @@ func (box *Box) decrypt(pw *Password) error {
 		return err
 	}
 	if len(pw.AccountIV) != block.BlockSize() {
-		return ErrLengthOfIV
+		return errLengthOfIV
 	}
 	if len(pw.PasswordIV) != block.BlockSize() {
-		return ErrLengthOfIV
+		return errLengthOfIV
 	}
 	pw.PlainAccount = string(cfbDecrypt(block, pw.AccountIV, pw.CipherAccount))
 	pw.PlainPassword = string(cfbDecrypt(block, pw.PasswordIV, pw.CipherPassword))
 	return nil
 }
 
-func (box *Box) DecryptAll(masterPassword string) error {
-	box.masterPassword = masterPassword
-	for _, pw := range box.passwords {
-		err := box.decrypt(pw)
-		if err != nil {
-			return err
-		}
-	}
-	return box.save()
-}
-
 // sort passwords by Id
 type passwordSlice []Password
 
 func (ps passwordSlice) Len() int           { return len(ps) }
-func (ps passwordSlice) Less(i, j int) bool { return ps[i].Id < ps[j].Id }
+func (ps passwordSlice) Less(i, j int) bool { return ps[i].ID < ps[j].ID }
 func (ps passwordSlice) Swap(i, j int)      { ps[i], ps[j] = ps[j], ps[i] }
+func (ps passwordSlice) RowCount() int      { return ps.Len() }
+func (ps passwordSlice) ColCount() int {
+	if ps.Len() == 0 {
+		return 0
+	}
+	return ps[0].colCount()
+}
+func (ps passwordSlice) Get(i, j int) string {
+	return ps[i].get(j)
+}
 
 type passwordPtrSlice []*Password
 
 func (ps passwordPtrSlice) Len() int           { return len(ps) }
-func (ps passwordPtrSlice) Less(i, j int) bool { return ps[i].Id < ps[j].Id }
+func (ps passwordPtrSlice) Less(i, j int) bool { return ps[i].ID < ps[j].ID }
 func (ps passwordPtrSlice) Swap(i, j int)      { ps[i], ps[j] = ps[j], ps[i] }
+func (ps passwordPtrSlice) RowCount() int      { return ps.Len() }
+func (ps passwordPtrSlice) ColCount() int {
+	if ps.Len() == 0 {
+		return 0
+	}
+	return ps[0].colCount()
+}
+func (ps passwordPtrSlice) Get(i, j int) string {
+	return ps[i].get(j)
+}

@@ -5,25 +5,25 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+
+	"github.com/mkideal/pkg/textutil"
 )
 
 var (
-	ErrAmbiguous              = errors.New("ambiguous")
-	ErrAllocateId             = errors.New("allocate id fail")
-	ErrEmptyMasterPassword    = errors.New("master password is empty")
-	ErrMasterPasswordTooShort = errors.New("master password too short")
-	ErrPasswordTooShort       = errors.New("password too short")
-	ErrNotFullBlock           = errors.New("cipher bytes not full block")
-	ErrLengthOfIV             = errors.New("IV length not equal to block size")
+	errAmbiguous              = errors.New("ambiguous")
+	errAllocateID             = errors.New("allocate id fail")
+	errEmptyMasterPassword    = errors.New("master password is empty")
+	errMasterPasswordTooShort = errors.New("master password too short")
+	errPasswordTooShort       = errors.New("password too short")
+	errNotFullBlock           = errors.New("cipher bytes not full block")
+	errLengthOfIV             = errors.New("IV length not equal to block size")
 )
 
 func newErrAmbiguous(passwords []*Password) error {
 	buf := bytes.NewBufferString("ambiguous:")
-	sort.Stable(passwordPtrSlice(passwords))
-	for _, pw := range passwords {
-		buf.WriteString("\n")
-		pw.Brief(buf, passwordFormat)
-	}
+	table := passwordPtrSlice(passwords)
+	sort.Stable(table)
+	textutil.WriteTable(buf, table)
 	return errors.New(buf.String())
 }
 

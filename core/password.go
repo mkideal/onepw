@@ -2,13 +2,12 @@ package core
 
 import (
 	"crypto/cipher"
-	"fmt"
-	"io"
 	"time"
 )
 
-const shortIdLength = 7
+const shortIDLength = 7
 
+// PasswordBasic is basic of Password
 type PasswordBasic struct {
 	// Category of password
 	Category string `cli:"c,category" usage:"category of password"`
@@ -27,11 +26,12 @@ type PasswordBasic struct {
 	Ext string `cli:"-"`
 }
 
+// Password represents entity of password
 type Password struct {
 	PasswordBasic
 
 	// Unique id of password
-	Id string `cli:"id" usage:"password id for updating"`
+	ID string `cli:"id" usage:"password id for updating"`
 
 	// IVs
 	AccountIV  []byte `cli:"-"`
@@ -48,10 +48,34 @@ type Password struct {
 	LastUpdatedAt int64 `cli:"-"`
 }
 
+var passwordHeader = []string{"ID", "CATEGORY", "ACCOUNT", "PASSWORD", "UPDATED_AT"}
+
+func (pw Password) get(i int) string {
+	switch i {
+	case 0:
+		return pw.ShortID()
+	case 1:
+		return pw.Category
+	case 2:
+		return pw.PlainAccount
+	case 3:
+		return pw.PlainPassword
+	case 4:
+		return time.Unix(pw.LastUpdatedAt, 0).Format(time.RFC3339)
+	}
+	panic("unreachable")
+}
+
+func (pw Password) colCount() int {
+	return 5
+}
+
+// NewEmptyPassword creates a empty Password entity
 func NewEmptyPassword() *Password {
 	return NewPassword("", "", "", "")
 }
 
+// NewPassword creates a Password entity
 func NewPassword(category, account, passwd, site string) *Password {
 	now := time.Now().Unix()
 	pw := &Password{
@@ -72,15 +96,12 @@ func NewPassword(category, account, passwd, site string) *Password {
 	return pw
 }
 
-func (pw *Password) Brief(w io.Writer, format string) {
-	fmt.Fprintf(w, format, pw.ShortId(), pw.Category, pw.PlainAccount, pw.PlainPassword, time.Unix(pw.LastUpdatedAt, 0).Format(time.RFC3339))
-}
-
-func (pw *Password) ShortId() string {
-	if len(pw.Id) > shortIdLength {
-		return pw.Id[:shortIdLength]
+// ShortID returns short length id string
+func (pw *Password) ShortID() string {
+	if len(pw.ID) > shortIDLength {
+		return pw.ID[:shortIDLength]
 	}
-	return pw.Id
+	return pw.ID
 }
 
 func (pw *Password) migrate(from *Password) {
@@ -89,9 +110,10 @@ func (pw *Password) migrate(from *Password) {
 	copy(pw.PasswordBasic.Tags, from.PasswordBasic.Tags)
 }
 
+// CheckPassword validate password string
 func CheckPassword(passwd string) error {
 	if len(passwd) < 6 {
-		return ErrPasswordTooShort
+		return errPasswordTooShort
 	}
 	return nil
 }
