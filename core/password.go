@@ -2,6 +2,7 @@ package core
 
 import (
 	"crypto/cipher"
+	"strings"
 	"time"
 )
 
@@ -68,6 +69,32 @@ func (pw Password) get(i int) string {
 
 func (pw Password) colCount() int {
 	return 5
+}
+
+func (pw Password) match(word string) bool {
+	if strings.Contains(pw.ID, word) {
+		return true
+	}
+	if strings.Contains(pw.Category, word) {
+		return true
+	}
+	if strings.Contains(pw.PlainAccount, word) {
+		return true
+	}
+	if strings.Contains(pw.PlainPassword, word) {
+		return true
+	}
+	if strings.Contains(pw.Site, word) {
+		return true
+	}
+	if pw.Tags != nil {
+		for _, tag := range pw.Tags {
+			if strings.Contains(tag, word) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // NewEmptyPassword creates a empty Password entity

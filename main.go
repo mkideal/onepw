@@ -20,6 +20,7 @@ func main() {
 		cli.Tree(add),
 		cli.Tree(remove),
 		cli.Tree(list),
+		cli.Tree(find),
 	).Run(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -326,5 +327,35 @@ var list = &cli.Command{
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*listT)
 		return box.List(ctx, argv.NoHeader)
+	},
+}
+
+//--------------
+// find command
+//--------------
+
+type findT struct {
+	cli.Helper
+	Config
+}
+
+var find = &cli.Command{
+	Name:        "find",
+	Desc:        "find password by id,category,account,tag,site and so on",
+	Text:        "Usage: onepw find <WORD>",
+	Argv:        func() interface{} { return new(findT) },
+	CanSubRoute: true,
+
+	OnBefore: func(ctx *cli.Context) error {
+		if len(ctx.Args()) != 1 {
+			ctx.WriteUsage()
+			return cli.ExitError
+		}
+		return nil
+	},
+
+	Fn: func(ctx *cli.Context) error {
+		box.Find(ctx, ctx.Args()[0])
+		return nil
 	},
 }

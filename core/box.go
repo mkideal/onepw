@@ -247,6 +247,19 @@ func (box *Box) List(w io.Writer, noHeader bool) error {
 	return nil
 }
 
+// Find finds password by word
+func (box *Box) Find(w io.Writer, word string) error {
+	box.RLock()
+	defer box.RUnlock()
+	if box.masterPassword == "" {
+		return errEmptyMasterPassword
+	}
+	table := passwordPtrSlice(box.find(func(pw *Password) bool { return pw.match(word) }))
+	sort.Stable(table)
+	textutil.WriteTable(w, table)
+	return nil
+}
+
 func (box *Box) sortedPasswords() []Password {
 	passwords := make([]Password, 0, len(box.passwords))
 	for _, pw := range box.passwords {
