@@ -73,12 +73,12 @@ var root = &cli.Command{
 	$> {{.onepw}} init
 
 	#2. add a new password
-	$> {{.onepw}} add --label=email -u user@example.com
+	$> {{.onepw}} add -c=email -u user@example.com
 	type the password:
 	repeat the password:
 
 	#3. list all passwords
-	$> {{.onepw}} list
+	$> {{.onepw}} ls
 
 	#optional
 	# upload cloud(e.g. dropbox or github or bitbucket ...)`, map[string]string{
@@ -251,17 +251,16 @@ var add = &cli.Command{
 type removeT struct {
 	cli.Helper
 	Config
-	Label   string `cli:"c,category" usage:"password label"`
-	Account string `cli:"u,account" usage:"specify account"`
-	Id      string `cli:"id" usage:"password id"`
-	All     bool   `cli:"a,all" usage:"remove all found passwords" dft:"false"`
+	All bool `cli:"a,all" usage:"remove all found passwords" dft:"false"`
 }
 
 var remove = &cli.Command{
-	Name:    "remove",
-	Aliases: []string{"rm", "del", "delete"},
-	Desc:    "remove passwords",
-	Argv:    func() interface{} { return new(removeT) },
+	Name:        "remove",
+	Aliases:     []string{"rm", "del", "delete"},
+	Desc:        "remove passwords by id or account",
+	Text:        "Usage: onepw rm [id] [OPTIONS]",
+	Argv:        func() interface{} { return new(removeT) },
+	CanSubRoute: true,
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*removeT)
@@ -274,23 +273,22 @@ var remove = &cli.Command{
 
 	Fn: func(ctx *cli.Context) error {
 		var (
-			argv = ctx.Argv().(*removeT)
-			ids  []string
-			err  error
+			argv       = ctx.Argv().(*removeT)
+			deletedIds []string
+			err        error
+			ids        = ctx.FreedomArgs()
 		)
-		if argv.Id != "" {
-			ids, err = box.Remove(argv.Id, argv.All)
-		} else if argv.Label != "" || argv.Account != "" {
-			ids, err = box.RemoveByAccount(argv.Label, argv.Account, argv.All)
+		if len(ids) > 0 {
+			deletedIds, err = box.Remove(ids, argv.All)
 		} else if argv.All {
-			ids, err = box.Clear()
+			deletedIds, err = box.Clear()
 		}
 
 		if err != nil {
 			return err
 		}
 		ctx.String("deleted passwords:\n")
-		ctx.String(strings.Join(ids, "\n"))
+		ctx.String(strings.Join(deletedIds, "\n"))
 		ctx.String("\n")
 		return nil
 	},

@@ -10,8 +10,8 @@ import (
 const shortIdLength = 7
 
 type PasswordBasic struct {
-	// Label of password
-	Label string `cli:"label" usage:"label of password"`
+	// Category of password
+	Category string `cli:"c,category" usage:"category of password"`
 
 	// Plain account and password
 	PlainAccount  string `json:"-" cli:"u,account" usage:"account of password"`
@@ -52,11 +52,11 @@ func NewEmptyPassword() *Password {
 	return NewPassword("", "", "", "")
 }
 
-func NewPassword(label, account, passwd, site string) *Password {
+func NewPassword(category, account, passwd, site string) *Password {
 	now := time.Now().Unix()
 	pw := &Password{
 		PasswordBasic: PasswordBasic{
-			Label:         label,
+			Category:      category,
 			PlainAccount:  account,
 			PlainPassword: passwd,
 			Site:          site,
@@ -73,7 +73,7 @@ func NewPassword(label, account, passwd, site string) *Password {
 }
 
 func (pw *Password) Brief(w io.Writer, format string) {
-	fmt.Fprintf(w, format, pw.ShortId(), pw.Label, pw.PlainAccount, pw.PlainPassword, time.Unix(pw.LastUpdatedAt, 0).Format(time.RFC3339))
+	fmt.Fprintf(w, format, pw.ShortId(), pw.Category, pw.PlainAccount, pw.PlainPassword, time.Unix(pw.LastUpdatedAt, 0).Format(time.RFC3339))
 }
 
 func (pw *Password) ShortId() string {

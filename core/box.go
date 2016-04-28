@@ -16,6 +16,8 @@ import (
 	"github.com/mkideal/pkg/debug"
 )
 
+const passwordFormat = "%-10s%-15s%-16s%-16s%-20s"
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
@@ -115,7 +117,7 @@ func (box *Box) Add(pw *Password) (id string, new bool, err error) {
 		pw = old
 		new = false
 	} else if pw.Id != "" {
-		err = ErrPasswordNotFound
+		err = newErrPasswordNotFound(pw.Id)
 		return
 	} else {
 		id, err = box.allocId()
@@ -134,44 +136,59 @@ func (box *Box) Add(pw *Password) (id string, new bool, err error) {
 	return
 }
 
-func (box *Box) Remove(id string, all bool) ([]string, error) {
+func (box *Box) Remove(ids []string, all bool) ([]string, error) {
 	box.Lock()
 	defer box.Unlock()
 	if box.masterPassword == "" {
 		return nil, ErrEmptyMasterPassword
 	}
-	if _, ok := box.passwords[id]; !ok {
-		ids := []string{}
-		for _, pw := range box.passwords {
-			if strings.HasPrefix(pw.Id, id) {
-				delete(box.passwords, pw.Id)
-				ids = append(ids, id)
+	deletedIds := []string{}
+	passwords := make([]*Password, 0)
+
+	for _, id := range ids {
+		size := len(deletedIds)
+		if foundPw, ok := box.passwords[id]; !ok {
+			for _, pw := range box.passwords {
+				if strings.HasPrefix(pw.Id, id) {
+					deletedIds = append(deletedIds, pw.Id)
+					passwords = append(passwords, pw)
+				}
 			}
-		}
-		if len(ids) > 0 {
-			return ids, box.save()
 		} else {
-			return []string{}, nil
+			deletedIds = append(deletedIds, id)
+			passwords = append(passwords, foundPw)
+		}
+		if len(deletedIds) == size {
+			return nil, newErrPasswordNotFound(id)
+		}
+		if len(deletedIds) > 1+size && !all {
+			return nil, newErrAmbiguous(passwords[size:])
 		}
 	}
-	delete(box.passwords, id)
-	return []string{id}, box.save()
+	deleted := make([]string, 0, len(deletedIds))
+	for _, id := range deletedIds {
+		if _, ok := box.passwords[id]; ok {
+			delete(box.passwords, id)
+			deleted = append(deleted, id)
+		}
+	}
+	return deleted, box.save()
 }
 
-func (box *Box) RemoveByAccount(label, account string, all bool) ([]string, error) {
+func (box *Box) RemoveByAccount(category, account string, all bool) ([]string, error) {
 	box.Lock()
 	defer box.Unlock()
 	if box.masterPassword == "" {
 		return nil, ErrEmptyMasterPassword
 	}
 	passwords := box.find(func(pw *Password) bool {
-		return pw.Label == label && pw.PlainAccount == account
+		return pw.Category == category && pw.PlainAccount == account
 	})
-	if len(passwords) > 1 && !all {
-		return nil, ErrAmbiguous
-	}
 	if len(passwords) == 0 {
-		return nil, ErrPasswordNotFound
+		return nil, newErrPasswordNotFoundWithAccount(category, account)
+	}
+	if len(passwords) > 1 && !all {
+		return nil, newErrAmbiguous(passwords)
 	}
 	ids := []string{}
 	for _, pw := range passwords {
@@ -211,16 +228,24 @@ func (box *Box) List(w io.Writer, noHeader bool) error {
 	if box.masterPassword == "" {
 		return ErrEmptyMasterPassword
 	}
-	format := "%-10s%-15s%-16s%-16s%-20s"
 	if !noHeader {
-		fmt.Fprintf(w, format, "ID", "LABEL", "ACCOUNT", "PASSWORD", "UPDATED_AT")
+		fmt.Fprintf(w, passwordFormat, "ID", "CATEGORY", "ACCOUNT", "PASSWORD", "UPDATED_AT")
 		w.Write([]byte{'\n'})
 	}
-	for _, pw := range box.passwords {
-		pw.Brief(w, format)
+	for _, pw := range box.sortedPasswords() {
+		pw.Brief(w, passwordFormat)
 		w.Write([]byte{'\n'})
 	}
 	return nil
+}
+
+func (box *Box) sortedPasswords() []Password {
+	passwords := make([]Password, 0, len(box.passwords))
+	for _, pw := range box.passwords {
+		passwords = append(passwords, *pw)
+	}
+	sort.Stable(passwordSlice(passwords))
+	return passwords
 }
 
 func (box *Box) allocId() (string, error) {
@@ -235,15 +260,12 @@ func (box *Box) allocId() (string, error) {
 }
 
 func (box *Box) marshal() ([]byte, error) {
-	passwords := make([]Password, 0, len(box.passwords))
-	var err error
 	for _, pw := range box.passwords {
-		if err = box.encrypt(pw); err != nil {
+		if err := box.encrypt(pw); err != nil {
 			return nil, err
 		}
-		passwords = append(passwords, *pw)
 	}
-	sort.Stable(passwordSlice(passwords))
+	passwords := box.sortedPasswords()
 	return json.MarshalIndent(passwords, "", "    ")
 }
 
@@ -311,9 +333,8 @@ func (box *Box) decrypt(pw *Password) error {
 
 func (box *Box) DecryptAll(masterPassword string) error {
 	box.masterPassword = masterPassword
-	var err error
 	for _, pw := range box.passwords {
-		err = box.decrypt(pw)
+		err := box.decrypt(pw)
 		if err != nil {
 			return err
 		}
@@ -327,3 +348,9 @@ type passwordSlice []Password
 func (ps passwordSlice) Len() int           { return len(ps) }
 func (ps passwordSlice) Less(i, j int) bool { return ps[i].Id < ps[j].Id }
 func (ps passwordSlice) Swap(i, j int)      { ps[i], ps[j] = ps[j], ps[i] }
+
+type passwordPtrSlice []*Password
+
+func (ps passwordPtrSlice) Len() int           { return len(ps) }
+func (ps passwordPtrSlice) Less(i, j int) bool { return ps[i].Id < ps[j].Id }
+func (ps passwordPtrSlice) Swap(i, j int)      { ps[i], ps[j] = ps[j], ps[i] }
