@@ -11,7 +11,7 @@ onepw is a command line tool for managing passwords, provide `init`,`add`,`remov
 
 ## Commands
 
-1. First of all, you should `init` a password box with master password, the master password can be set by ENV(e.g. echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc)
+1). First of all, you should `init` a password box with master password, the master password can be set by ENV(e.g. echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc)
 
 ```shell
 onepw init # master password setted by ENV
@@ -22,7 +22,7 @@ Or
 onepw init --master=MySecret
 ```
 
-2. And then, `add` a new password
+2). And then, `add` a new password
 
 ```shell
 $> onepw add -c=email -u user@example.com
@@ -30,7 +30,7 @@ type the password:		# enter in terminal
 repeat the password:	# enter in terminal, too
 ```
 
-3. `list` all passwords
+3). `list` all passwords
 ```shell
 $> onepw list
 ```
@@ -40,17 +40,17 @@ Or
 $> onepw ls
 ```
 
-4. `remove` passwords by id or account
+4). `remove` passwords by id or account
 ```shell
 $> onepw rm <id1 [id2...]> [--all | -a]
 ```
 
-5. `find` passwords by id,category,account,...
+5). `find` passwords by id,category,account,...
 ```shell
 $> onepw find <WORD>
 ```
 
-6. You can use dropbox or bitbucket store passwords
+6). You can use dropbox or bitbucket store passwords
 
 ## Example
 
