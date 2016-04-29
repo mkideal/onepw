@@ -347,7 +347,8 @@ var find = &cli.Command{
 	CanSubRoute: true,
 
 	OnBefore: func(ctx *cli.Context) error {
-		if len(ctx.Args()) != 1 {
+		argv := ctx.Argv().(*findT)
+		if argv.Help || len(ctx.Args()) != 1 {
 			ctx.WriteUsage()
 			return cli.ExitError
 		}
