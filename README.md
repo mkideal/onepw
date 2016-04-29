@@ -1,4 +1,4 @@
-# onepw [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/mkideal/onepw/master/LICENSE)
+# onepw [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/mkideal/onepw/master/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/mkideal/onepw)](https://goreportcard.com/report/github.com/mkideal/onepw)
 
 ## Install
 
@@ -13,7 +13,7 @@ onepw is a command line tool for managing passwords, provide `init`,`add`,`remov
 
 ## Commands
 
-1). First of all, you should `init` a password box with master password, the master password can be set by ENV(e.g. echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc)
+1). First of all, you should `init` a password box with master password, the master password can be set by ENV(e.g. echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc && source ~/.bashrc)
 
 ```shell
 onepw init # master password set by ENV
@@ -61,6 +61,8 @@ $> onepw find <WORD>
 ```shell
 $> mkdir mypasswords
 $> cd mypasswords
+$> echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc
+$> source ~/.bashrc
 
 # init password box
 $> onepw init
