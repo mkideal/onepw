@@ -16,7 +16,7 @@ onepw is a command line tool for managing passwords, provide `init`,`add`,`remov
 1). First of all, you should `init` a password box with master password, the master password can be set by ENV(e.g. echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc)
 
 ```shell
-onepw init # master password setted by ENV
+onepw init # master password set by ENV
 ```
 
 Or
