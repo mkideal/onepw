@@ -39,7 +39,7 @@ type Configure interface {
 
 // Config implementes Configure interface, represents onepw config
 type Config struct {
-	Master string `cli:"master" usage:"master password" dft:"$PASSWORD_MASTER"`
+	Master string `pw:"master" usage:"master password" dft:"$PASSWORD_MASTER" prompt:"type the master password"`
 }
 
 // Filename returns password data filename
