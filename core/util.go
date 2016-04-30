@@ -29,3 +29,9 @@ func hashsum(i interface{}, h hash.Hash) string {
 	}
 	return fmt.Sprintf("%x", h.Sum(dst))
 }
+
+func copyNonEmptyString(dst *string, src string) {
+	if src != "" {
+		*dst = src
+	}
+}

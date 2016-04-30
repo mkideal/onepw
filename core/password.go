@@ -132,9 +132,16 @@ func (pw *Password) ShortID() string {
 }
 
 func (pw *Password) migrate(from *Password) {
-	pw.PasswordBasic = from.PasswordBasic
-	pw.PasswordBasic.Tags = make([]string, len(from.PasswordBasic.Tags))
-	copy(pw.PasswordBasic.Tags, from.PasswordBasic.Tags)
+	copyNonEmptyString(&pw.PasswordBasic.Category, from.PasswordBasic.Category)
+	copyNonEmptyString(&pw.PasswordBasic.Ext, from.PasswordBasic.Ext)
+	copyNonEmptyString(&pw.PasswordBasic.PlainAccount, from.PasswordBasic.PlainAccount)
+	copyNonEmptyString(&pw.PasswordBasic.PlainPassword, from.PasswordBasic.PlainPassword)
+	copyNonEmptyString(&pw.PasswordBasic.Site, from.PasswordBasic.Site)
+
+	if from.PasswordBasic.Tags != nil && len(from.PasswordBasic.Tags) != 0 {
+		pw.PasswordBasic.Tags = make([]string, len(from.PasswordBasic.Tags))
+		copy(pw.PasswordBasic.Tags, from.PasswordBasic.Tags)
+	}
 }
 
 // CheckPassword validate password string
