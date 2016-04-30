@@ -10,13 +10,15 @@ import (
 )
 
 var (
-	errAmbiguous              = errors.New("ambiguous")
-	errAllocateID             = errors.New("allocate id fail")
-	errEmptyMasterPassword    = errors.New("master password is empty")
-	errMasterPasswordTooShort = errors.New("master password too short")
-	errPasswordTooShort       = errors.New("password too short")
-	errNotFullBlock           = errors.New("cipher bytes not full block")
-	errLengthOfIV             = errors.New("IV length not equal to block size")
+	errAmbiguous                   = errors.New("ambiguous")
+	errAllocateID                  = errors.New("allocate id fail")
+	errEmptyMasterPassword         = errors.New("master password is empty")
+	errMasterPasswordTooShort      = errors.New("master password too short")
+	errPasswordTooShort            = errors.New("password too short")
+	errNotFullBlock                = errors.New("cipher bytes not full block")
+	errLengthOfIV                  = errors.New("IV length not equal to block size")
+	errMissingMasterPasswordInBook = errors.New("master password not found in password book")
+	errMasterPassword              = errors.New("incorrect master password")
 )
 
 func newErrAmbiguous(passwords []*Password) error {

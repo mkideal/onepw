@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/gommon/color"
 	"github.com/mkideal/cli"
 	"github.com/mkideal/onepw/core"
+	"github.com/mkideal/pkg/debug"
 	"github.com/mkideal/pkg/textutil"
 )
 
@@ -21,6 +22,7 @@ func main() {
 		cli.Tree(remove),
 		cli.Tree(list),
 		cli.Tree(find),
+		cli.Tree(upgrade),
 	).Run(os.Args[1:]); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -35,11 +37,13 @@ func main() {
 type Configure interface {
 	Filename() string
 	MasterPassword() string
+	Debug() bool
 }
 
 // Config implementes Configure interface, represents onepw config
 type Config struct {
-	Master string `pw:"master" usage:"master password" dft:"$PASSWORD_MASTER" prompt:"type the master password"`
+	Master      string `pw:"master" usage:"master password" dft:"$PASSWORD_MASTER" prompt:"type the master password"`
+	EnableDebug bool   `cli:"debug" usage:"usage debug mode" dft:"false"`
 }
 
 // Filename returns password data filename
@@ -52,6 +56,11 @@ func (cfg Config) MasterPassword() string {
 	return cfg.Master
 }
 
+// Debug returns debug mode
+func (cfg Config) Debug() bool {
+	return cfg.EnableDebug
+}
+
 var box *core.Box
 
 //--------------
@@ -61,7 +70,6 @@ var box *core.Box
 type rootT struct {
 	cli.Helper
 	Version bool `cli:"!v,version" usage:"display version information"`
-	Config
 }
 
 var root = &cli.Command{
@@ -109,6 +117,7 @@ var root = &cli.Command{
 	OnRootBefore: func(ctx *cli.Context) error {
 		if argv := ctx.Argv(); argv != nil {
 			if t, ok := argv.(Configure); ok {
+				debug.Switch(t.Debug())
 				repo := core.NewFileRepository(t.Filename())
 				box = core.NewBox(repo)
 				if t.MasterPassword() != "" {
@@ -134,8 +143,6 @@ var help = cli.HelpCommand("display help")
 //-----------------
 // version command
 //-----------------
-
-const appVersion = "v0.0.1"
 
 var version = &cli.Command{
 	Name:   "version",
@@ -209,7 +216,7 @@ type addT struct {
 
 func (argv *addT) Validate(ctx *cli.Context) error {
 	if argv.Pw != argv.Cpw {
-		return fmt.Errorf("password mismatch")
+		return fmt.Errorf("2 passwords mismatch")
 	}
 	return core.CheckPassword(argv.Pw)
 }
@@ -222,7 +229,6 @@ var add = &cli.Command{
 		argv.Password = *core.NewEmptyPassword()
 		return argv
 	},
-	CanSubRoute: false,
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*addT)
@@ -236,14 +242,14 @@ var add = &cli.Command{
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*addT)
 		argv.Password.PlainPassword = argv.Pw
-		id, ok, err := box.Add(&argv.Password)
+		id, new, err := box.Add(&argv.Password)
 		if err != nil {
 			return err
 		}
-		if ok {
-			ctx.String("password %s updated\n", id)
+		if new {
+			ctx.String("password %s added\n", id)
 		} else {
-			ctx.String("add password %d success\n", id)
+			ctx.String("password %s updated\n", id)
 		}
 		return nil
 	},
@@ -262,8 +268,8 @@ type removeT struct {
 var remove = &cli.Command{
 	Name:        "remove",
 	Aliases:     []string{"rm", "del", "delete"},
-	Desc:        "remove passwords by id or account",
-	Text:        "Usage: onepw rm [id] [OPTIONS]",
+	Desc:        "remove passwords by ids or (category,account)",
+	Text:        "Usage: onepw rm [ids...] [OPTIONS]",
 	Argv:        func() interface{} { return new(removeT) },
 	CanSubRoute: true,
 
@@ -357,6 +363,40 @@ var find = &cli.Command{
 
 	Fn: func(ctx *cli.Context) error {
 		box.Find(ctx, ctx.Args()[0])
+		return nil
+	},
+}
+
+//-----------------
+// upgrade command
+//-----------------
+
+type upgradeT struct {
+	cli.Helper
+	Config
+}
+
+var upgrade = &cli.Command{
+	Name:    "upgrade",
+	Aliases: []string{"up"},
+	Desc:    "upgrade to newest version",
+	Argv:    func() interface{} { return new(upgradeT) },
+
+	OnBefore: func(ctx *cli.Context) error {
+		argv := ctx.Argv().(*upgradeT)
+		if argv.Help || len(ctx.Args()) != 0 {
+			ctx.WriteUsage()
+			return cli.ExitError
+		}
+		return nil
+	},
+
+	Fn: func(ctx *cli.Context) error {
+		from, to, err := box.Upgrade()
+		if err != nil {
+			return err
+		}
+		ctx.String("upgrade from %d to %d!\n", from, to)
 		return nil
 	},
 }

@@ -11,6 +11,30 @@ onepw is a command line tool for managing passwords, provide `init`,`add`,`remov
 
 `onepw` built by [**mkideal/cli**](https://github.com/mkideal/cli).
 
+## Principles
+
+1) Generate Key by master password
+
+	+--------+         +-----+
+	| Master | MD5Sum  |     |
+	| Pass   |========>| Key |
+	| Word   |         |     |
+	+--------+         +-----+
+
+2) Encrypt account and password
+
+	+-----------+
+	|           |
+	| Random IV |==|
+	|           |  |                +------------+
+	+-----------+  | CFB Encrypter  |            |
+                   |===============>| CipherText |
+	+-----------+  | AES Cipher     |            |
+	|           |  | with Key       +------------+
+	| PlainText |==|
+	|           |
+	+-----------+
+
 ## Commands
 
 1). First of all, you should `init` a password box with master password, the master password can be set by ENV(e.g. echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc && source ~/.bashrc)

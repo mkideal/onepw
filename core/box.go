@@ -2,10 +2,8 @@ package core
 
 import (
 	"crypto/aes"
-	"crypto/md5"
 	crand "crypto/rand"
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/rand"
 	"sort"
@@ -21,23 +19,25 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func md5sum(i interface{}) string {
-	switch v := i.(type) {
-	case string:
-		return fmt.Sprintf("%x", md5.Sum([]byte(v)))
-
-	case []byte:
-		return fmt.Sprintf("%x", md5.Sum(v))
-
-	default:
-		return fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%v", v))))
-	}
-}
+const (
+	masterPasswordID = "0"
+	currentVersion   = 1
+)
 
 // BoxRepository define repo for storing passwords
 type BoxRepository interface {
 	Load() ([]byte, error)
 	Save([]byte) error
+}
+
+type boxStore struct {
+	Version   int
+	Master    Password
+	Passwords []Password
+}
+
+func (store *boxStore) clear() {
+	store.Passwords = store.Passwords[0:0]
 }
 
 // Box represents password box
@@ -46,6 +46,8 @@ type Box struct {
 	masterPassword string
 	repo           BoxRepository
 	passwords      map[string]*Password
+
+	store *boxStore
 }
 
 // Init initialize box with master password
@@ -73,8 +75,15 @@ func NewBox(repo BoxRepository) *Box {
 	box := &Box{
 		repo:      repo,
 		passwords: map[string]*Password{},
+		store:     &boxStore{Passwords: []Password{}},
 	}
 	return box
+}
+
+func (box *Box) generateMasterPasswordEntity() *Password {
+	pw := NewPassword("master", "master", sha1sum(box.masterPassword), "")
+	pw.ID = masterPasswordID
+	return pw
 }
 
 // Load loads password box
@@ -89,7 +98,28 @@ func (box *Box) load() error {
 	if err != nil {
 		return err
 	}
-	return box.unmarshal(data)
+	if err := box.unmarshal(data); err != nil {
+		return err
+	}
+
+	// decrypt master password
+	if err := box.decrypt(&box.store.Master); err != nil {
+		return err
+	}
+
+	// check something by Version
+	if box.store.Version >= 1 {
+		// check master password since version 1
+		if box.store.Master.ID == "" {
+			return errMissingMasterPasswordInBook
+		}
+		if box.store.Master.PlainPassword != sha1sum(box.masterPassword) {
+			debug.Debugf("master: %s vs %s", box.store.Master.PlainPassword, box.masterPassword)
+			return errMasterPassword
+		}
+	}
+
+	return nil
 }
 
 // Save saves password box
@@ -100,6 +130,10 @@ func (box *Box) Save() error {
 }
 
 func (box *Box) save() error {
+	// encrypt master password
+	if err := box.encrypt(&box.store.Master); err != nil {
+		return err
+	}
 	data, err := box.marshal()
 	if err != nil {
 		return err
@@ -108,37 +142,57 @@ func (box *Box) save() error {
 	return box.repo.Save(data)
 }
 
-// Add adds a new password to box
-func (box *Box) Add(pw *Password) (id string, new bool, err error) {
-	debug.Debugf("Add new password: %v", pw)
+// Upgrade upgrade to current version
+func (box *Box) Upgrade() (from, to int, err error) {
 	box.Lock()
 	defer box.Unlock()
+
+	from, to = box.store.Version, currentVersion
+	box.store.Master = *box.generateMasterPasswordEntity()
+	box.store.Version = to
+	err = box.save()
+	return
+}
+
+// Add adds a new password to box
+func (box *Box) Add(pw *Password) (id string, new bool, err error) {
+	box.Lock()
+	defer box.Unlock()
+
+	debug.Debugf("add password: %v", pw)
 	if box.masterPassword == "" {
 		err = errEmptyMasterPassword
 		return
 	}
-	if old, ok := box.passwords[pw.ID]; ok {
+	passwords := box.find(func(p *Password) bool {
+		return strings.HasPrefix(p.ID, pw.ID)
+	})
+	if len(passwords) > 1 {
+		err = newErrAmbiguous(passwords)
+		return
+	} else if len(passwords) == 1 {
+		old := passwords[0]
 		old.LastUpdatedAt = time.Now().Unix()
 		old.migrate(pw)
 		pw = old
 		new = false
-	} else if pw.ID != "" {
-		err = newErrPasswordNotFound(pw.ID)
-		return
 	} else {
-		id, err = box.allocID()
-		if err != nil {
-			return
+		if len(pw.ID) < shortIDLength {
+			id, err = box.allocID()
+			if err != nil {
+				return
+			}
+			pw.ID = id
 		}
-		pw.ID = id
 		new = true
 	}
 	if err = box.encrypt(pw); err != nil {
 		return
 	}
 	box.passwords[pw.ID] = pw
-	debug.Debugf("add new password: %v", pw)
+	id = pw.ID
 	err = box.save()
+	debug.Debugf("add new password: %v", pw)
 	return
 }
 
@@ -255,7 +309,7 @@ func (box *Box) Find(w io.Writer, word string) error {
 		return errEmptyMasterPassword
 	}
 	table := passwordPtrSlice(box.find(func(pw *Password) bool { return pw.match(word) }))
-	sort.Stable(table)
+	sort.Sort(table)
 	textutil.WriteTable(w, table)
 	return nil
 }
@@ -265,7 +319,7 @@ func (box *Box) sortedPasswords() []Password {
 	for _, pw := range box.passwords {
 		passwords = append(passwords, *pw)
 	}
-	sort.Stable(passwordSlice(passwords))
+	sort.Sort(passwordSlice(passwords))
 	return passwords
 }
 
@@ -276,6 +330,7 @@ func (box *Box) allocID() (string, error) {
 		if _, ok := box.passwords[id]; !ok {
 			return id, nil
 		}
+		count++
 	}
 	return "", errAllocateID
 }
@@ -286,23 +341,25 @@ func (box *Box) marshal() ([]byte, error) {
 			return nil, err
 		}
 	}
-	passwords := box.sortedPasswords()
-	return json.MarshalIndent(passwords, "", "    ")
+	box.store.Passwords = box.sortedPasswords()
+	return json.MarshalIndent(box.store, "", "    ")
 }
 
 func (box *Box) unmarshal(data []byte) error {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
-	passwords := make([]Password, 0)
-	err := json.Unmarshal(data, &passwords)
+	box.store.clear()
+	err := json.Unmarshal(data, box.store)
 	if err != nil {
-		return err
+		err = json.Unmarshal(data, &box.store.Passwords)
+		if err != nil {
+			return err
+		}
 	}
-	debug.Debugf("unmarshal result: %v", passwords)
 
-	for i := range passwords {
-		pw := &(passwords[i])
+	for i := range box.store.Passwords {
+		pw := &(box.store.Passwords[i])
 		if box.masterPassword != "" {
 			if err := box.decrypt(pw); err != nil {
 				return err
@@ -310,7 +367,6 @@ func (box *Box) unmarshal(data []byte) error {
 		}
 		box.passwords[pw.ID] = pw
 	}
-	debug.Debugf("load result: %v", box.passwords)
 	return nil
 }
 
