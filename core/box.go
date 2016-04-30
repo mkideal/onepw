@@ -75,7 +75,7 @@ func NewBox(repo BoxRepository) *Box {
 	box := &Box{
 		repo:      repo,
 		passwords: map[string]*Password{},
-		store:     &boxStore{Passwords: []Password{}},
+		store:     &boxStore{Version: currentVersion, Passwords: []Password{}},
 	}
 	return box
 }
@@ -356,6 +356,7 @@ func (box *Box) unmarshal(data []byte) error {
 	box.store.clear()
 	err := json.Unmarshal(data, box.store)
 	if err != nil {
+		box.store.Version = 0
 		err = json.Unmarshal(data, &box.store.Passwords)
 		if err != nil {
 			return err
