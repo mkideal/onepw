@@ -153,9 +153,14 @@ func (box *Box) Add(pw *Password) (id string, new bool, err error) {
 		err = errEmptyMasterPassword
 		return
 	}
-	passwords := box.find(func(p *Password) bool {
-		return strings.HasPrefix(p.ID, pw.ID)
-	})
+	var passwords []*Password
+	if pw.ID != "" {
+		passwords = box.find(func(p *Password) bool {
+			return strings.HasPrefix(p.ID, pw.ID)
+		})
+	} else {
+		passwords = []*Password{}
+	}
 	if len(passwords) > 1 {
 		err = newErrAmbiguous(passwords)
 		return

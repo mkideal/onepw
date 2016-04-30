@@ -149,6 +149,9 @@ func TestAdd(t *testing.T) {
 			t.Errorf("PlainPassword want %s, got %s", wantPlainPassword, pw.PlainPassword)
 		}
 	}
+	if len(box.passwords) != 2 {
+		t.Errorf("passwords size want %d, got %d", 2, len(box.passwords))
+	}
 }
 
 func TestRemove(t *testing.T) {
