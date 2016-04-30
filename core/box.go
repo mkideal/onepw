@@ -86,13 +86,6 @@ func (box *Box) generateMasterPasswordEntity() *Password {
 	return pw
 }
 
-// Load loads password box
-func (box *Box) Load() error {
-	box.Lock()
-	defer box.Unlock()
-	return box.load()
-}
-
 func (box *Box) load() error {
 	data, err := box.repo.Load()
 	if err != nil {
@@ -113,22 +106,14 @@ func (box *Box) load() error {
 	if box.store.Version >= 1 {
 		// check master password since version 1
 		if box.store.Master.ID == "" {
-			return errMissingMasterPasswordInBook
-		}
-		if box.store.Master.PlainPassword != sha1sum(box.masterPassword) {
+			box.store.Master = *box.generateMasterPasswordEntity()
+		} else if box.store.Master.PlainPassword != sha1sum(box.masterPassword) {
 			debug.Debugf("master: %s vs %s", box.store.Master.PlainPassword, box.masterPassword)
 			return errMasterPassword
 		}
 	}
 
 	return nil
-}
-
-// Save saves password box
-func (box *Box) Save() error {
-	box.Lock()
-	defer box.Unlock()
-	return box.save()
 }
 
 func (box *Box) save() error {
