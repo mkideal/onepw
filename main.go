@@ -247,9 +247,9 @@ var add = &cli.Command{
 			return err
 		}
 		if new {
-			ctx.String("password %s added\n", id)
+			ctx.String("password %s added\n", ctx.Color().Cyan(id))
 		} else {
-			ctx.String("password %s updated\n", id)
+			ctx.String("password %s updated\n", ctx.Color().Cyan(id))
 		}
 		return nil
 	},
@@ -299,7 +299,7 @@ var remove = &cli.Command{
 			return err
 		}
 		ctx.String("deleted passwords:\n")
-		ctx.String(strings.Join(deletedIds, "\n"))
+		ctx.String(ctx.Color().Cyan(strings.Join(deletedIds, "\n")))
 		ctx.String("\n")
 		return nil
 	},

@@ -4,8 +4,13 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"fmt"
+	"github.com/labstack/gommon/color"
 	"hash"
 )
+
+type colorable interface {
+	Color() *color.Color
+}
 
 func md5sum(i interface{}) string {
 	return hashsum(i, md5.New())

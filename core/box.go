@@ -291,7 +291,7 @@ func (box *Box) List(w io.Writer, noHeader bool) error {
 	if !noHeader {
 		table = textutil.AddTableHeader(table, passwordHeader)
 	}
-	textutil.WriteTable(w, table)
+	textutil.WriteTable(w, table, box.colorID(w, !noHeader))
 	return nil
 }
 
@@ -299,13 +299,26 @@ func (box *Box) List(w io.Writer, noHeader bool) error {
 func (box *Box) Find(w io.Writer, word string) error {
 	box.RLock()
 	defer box.RUnlock()
+
 	if box.masterPassword == "" {
 		return errEmptyMasterPassword
 	}
 	table := passwordPtrSlice(box.find(func(pw *Password) bool { return pw.match(word) }))
 	sort.Sort(table)
-	textutil.WriteTable(w, table)
+	textutil.WriteTable(w, table, box.colorID(w, false))
 	return nil
+}
+
+func (box *Box) colorID(w io.Writer, hasHeader bool) textutil.CellStyleFunc {
+	return func(row, col int, cell string) string {
+		if col != 0 || (row == 0 && hasHeader) {
+			return cell
+		}
+		if clr, ok := w.(colorable); ok {
+			return clr.Color().Cyan(cell)
+		}
+		return cell
+	}
 }
 
 func (box *Box) sortedPasswords() []Password {
