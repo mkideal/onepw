@@ -103,8 +103,10 @@ func (box *Box) load() error {
 	}
 
 	// decrypt master password
-	if err := box.decrypt(&box.store.Master); err != nil {
-		return err
+	if box.store.Master.ID != "" {
+		if err := box.decrypt(&box.store.Master); err != nil {
+			return err
+		}
 	}
 
 	// check something by Version
@@ -131,8 +133,10 @@ func (box *Box) Save() error {
 
 func (box *Box) save() error {
 	// encrypt master password
-	if err := box.encrypt(&box.store.Master); err != nil {
-		return err
+	if box.store.Master.ID != "" {
+		if err := box.encrypt(&box.store.Master); err != nil {
+			return err
+		}
 	}
 	data, err := box.marshal()
 	if err != nil {
@@ -398,9 +402,11 @@ func (box *Box) decrypt(pw *Password) error {
 		return err
 	}
 	if len(pw.AccountIV) != block.BlockSize() {
+		debug.Panicf("%s: AccountIV.length=%d, want %d", pw.ID, len(pw.AccountIV), block.BlockSize())
 		return errLengthOfIV
 	}
 	if len(pw.PasswordIV) != block.BlockSize() {
+		debug.Panicf("%s: PasswordIV.length=%d, want %d", pw.ID, len(pw.PasswordIV), block.BlockSize())
 		return errLengthOfIV
 	}
 	pw.PlainAccount = string(cfbDecrypt(block, pw.AccountIV, pw.CipherAccount))
