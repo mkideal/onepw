@@ -164,3 +164,7 @@ $> onepw ls
 | d9437f0 | email    | user@example.com | 123456   | 2016-04-29T00:54:36+08:00 |
 +---------+----------+------------------+----------+---------------------------+
 ```
+
+## CHANGELOG
+
+[ChangeLog](https://github.com/mkideal/onepw/blob/master/CHANGELOG.md)
