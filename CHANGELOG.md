@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# HEAD
+
+* Add `-p(--just-password)` and `-f(--just-first)` flags for find command
+
 # v0.0.2
 
 * Add validating master password(you **SHOULD** upgrade password.data by `onepw up`)

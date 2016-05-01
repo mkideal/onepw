@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	crand "crypto/rand"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/rand"
 	"sort"
@@ -296,15 +297,29 @@ func (box *Box) List(w io.Writer, noHeader bool) error {
 }
 
 // Find finds password by word
-func (box *Box) Find(w io.Writer, word string) error {
+func (box *Box) Find(w io.Writer, word string, justPassword, justFirst bool) error {
 	box.RLock()
 	defer box.RUnlock()
 
 	if box.masterPassword == "" {
 		return errEmptyMasterPassword
 	}
-	table := passwordPtrSlice(box.find(func(pw *Password) bool { return pw.match(word) }))
+	table := passwordPtrSlice(box.find(func(pw *Password) bool {
+		return pw.match(word)
+	}))
+	if len(table) == 0 {
+		return nil
+	}
 	sort.Sort(table)
+	if justFirst {
+		table = table[:1]
+	}
+	if justPassword {
+		for _, pw := range table {
+			fmt.Fprintf(w, "%s\n", pw.PlainPassword)
+		}
+		return nil
+	}
 	textutil.WriteTable(w, table, box.colorID(w, false))
 	return nil
 }

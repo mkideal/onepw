@@ -343,6 +343,8 @@ var list = &cli.Command{
 type findT struct {
 	cli.Helper
 	Config
+	JustPassword bool `cli:"p,just-password" usage:"only show password" dft:"false"`
+	JustFirst    bool `cli:"f,just-first" usage:"only show first result" dft:"false"`
 }
 
 var find = &cli.Command{
@@ -354,7 +356,7 @@ var find = &cli.Command{
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*findT)
-		if argv.Help || len(ctx.Args()) != 1 {
+		if argv.Help || len(ctx.FreedomArgs()) != 1 {
 			ctx.WriteUsage()
 			return cli.ExitError
 		}
@@ -362,7 +364,8 @@ var find = &cli.Command{
 	},
 
 	Fn: func(ctx *cli.Context) error {
-		box.Find(ctx, ctx.Args()[0])
+		argv := ctx.Argv().(*findT)
+		box.Find(ctx, ctx.Args()[0], argv.JustPassword, argv.JustFirst)
 		return nil
 	},
 }
