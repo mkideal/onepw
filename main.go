@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"math/rand"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/Bowery/prompt"
 	"github.com/labstack/gommon/color"
 	"github.com/mattn/go-colorable"
 	"github.com/mkideal/cli"
@@ -24,6 +29,7 @@ func main() {
 		cli.Tree(list),
 		cli.Tree(find),
 		cli.Tree(upgrade),
+		cli.Tree(generate),
 	).Run(os.Args[1:]); err != nil {
 		fmt.Fprintln(colorable.NewColorableStderr(), err)
 		os.Exit(1)
@@ -162,7 +168,7 @@ var version = &cli.Command{
 type initT struct {
 	cli.Helper
 	Config
-	NewMaster string `cli:"new-master" usage:"new master password"`
+	Update bool `cli:"u,update" usage:"whether update master password" dft:"false"`
 }
 
 func (argv *initT) Validate(ctx *cli.Context) error {
@@ -197,8 +203,12 @@ var initCmd = &cli.Command{
 
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*initT)
-		if argv.NewMaster != "" {
-			return box.Init(argv.NewMaster)
+		if argv.Update {
+			data, err := prompt.Password("type the new master password: ")
+			if err != nil {
+				return err
+			}
+			return box.Update(string(data))
 		}
 		return nil
 	},
@@ -401,6 +411,103 @@ var upgrade = &cli.Command{
 			return err
 		}
 		ctx.String("upgrade from %d to %d!\n", from, to)
+		return nil
+	},
+}
+
+//------------------
+// generate command
+//------------------
+type generateT struct {
+	cli.Helper
+	Num                uint16 `cli:"n,number" usage:"number of generated passwords" dft:"1" name:"N"`
+	ContainDigit       bool   `cli:"d,digit" usage:"whether the password contains digit" dft:"false"`
+	ContainLowerChar   bool   `cli:"c,lower-char" usage:"whether the password contains lowercase character" dft:"false"`
+	ContainUpperChar   bool   `cli:"C,upper-char" usage:"whether the password contains uppercase character" dft:"false"`
+	ContainSpecialChar bool   `cli:"s,special-char" usage:"whether the password contains the special character" dft:"false"`
+	SpecialCharSet     string `cli:"sset,special-set" usage:"custom special character set"`
+
+	length int `cli:"-"`
+}
+
+var (
+	digits         = []byte("0123456789")
+	lowercaseChars = []byte("abcdefghijklmnopqrstuvwxyz")
+	uppercaseChars = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	specialChars   = []byte("~!@#$%^&*")
+)
+
+func (argv *generateT) Validate(ctx *cli.Context) error {
+	if argv.Num == 0 {
+		return fmt.Errorf("N must > 0")
+	}
+	args := ctx.FreedomArgs()
+	if len(args) == 1 {
+		length, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("LEN must be a number")
+		}
+		if length <= 0 {
+			return fmt.Errorf("LEN must > 0")
+		}
+		argv.length = length
+	}
+
+	return nil
+}
+
+var generate = &cli.Command{
+	Name:        "generate",
+	Aliases:     []string{"gen"},
+	Desc:        "a utility command for generating password",
+	Text:        "Usage: onepw generate [OPTIONS] LEN",
+	Argv:        func() interface{} { return new(generateT) },
+	NoHook:      true,
+	CanSubRoute: true,
+
+	Fn: func(ctx *cli.Context) error {
+		argv := ctx.Argv().(*generateT)
+		if argv.Help || len(ctx.FreedomArgs()) != 1 {
+			ctx.WriteUsage()
+			return nil
+		}
+		if !argv.ContainDigit && !argv.ContainLowerChar && !argv.ContainUpperChar && !argv.ContainSpecialChar {
+			argv.ContainDigit = true
+			argv.ContainLowerChar = true
+			argv.ContainUpperChar = true
+		}
+		rand.Seed(time.Now().UnixNano())
+
+		charSetBuff := bytes.NewBufferString("")
+		if argv.ContainDigit {
+			charSetBuff.Write(digits)
+		}
+		if argv.ContainLowerChar {
+			charSetBuff.Write(lowercaseChars)
+		}
+		if argv.ContainUpperChar {
+			charSetBuff.Write(uppercaseChars)
+		}
+		if argv.ContainSpecialChar {
+			if argv.SpecialCharSet == "" {
+				charSetBuff.Write(specialChars)
+			} else {
+				charSetBuff.WriteString(argv.SpecialCharSet)
+			}
+		}
+		charSetLength := charSetBuff.Len()
+		if charSetLength == 0 {
+			return fmt.Errorf("charset is empty")
+		}
+		charSet := charSetBuff.Bytes()
+		for i := 0; i < int(argv.Num); i++ {
+			pw := make([]byte, argv.length)
+			for j := 0; j < argv.length; j++ {
+				pw[j] = charSet[rand.Intn(charSetLength)]
+			}
+			ctx.Write(pw)
+			ctx.Write([]byte{'\n'})
+		}
 		return nil
 	},
 }

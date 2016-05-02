@@ -53,15 +53,33 @@ type Box struct {
 
 // Init initialize box with master password
 func (box *Box) Init(masterPassword string) error {
-	//TODO: check masterPassword
-	if len(masterPassword) < 6 {
-		return errMasterPasswordTooShort
+	if err := CheckPassword(masterPassword); err != nil {
+		return err
 	}
 	box.Lock()
 	defer box.Unlock()
 	box.masterPassword = masterPassword
 	if err := box.load(); err != nil {
 		return err
+	}
+	for _, pw := range box.passwords {
+		if err := box.encrypt(pw); err != nil {
+			return err
+		}
+	}
+	return box.save()
+}
+
+// Update updates master password
+func (box *Box) Update(newMasterPassword string) error {
+	box.Lock()
+	defer box.Unlock()
+	if err := CheckPassword(newMasterPassword); err != nil {
+		return err
+	}
+	box.masterPassword = newMasterPassword
+	if box.store.Version > 0 {
+		box.store.Master = *box.generateMasterPasswordEntity()
 	}
 	for _, pw := range box.passwords {
 		if err := box.encrypt(pw); err != nil {

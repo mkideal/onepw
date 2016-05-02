@@ -2,7 +2,7 @@
 
 ## Install
 
-```
+```sh
 go get github.com/mkideal/onepw
 ```
 
@@ -37,52 +37,93 @@ onepw is a command line tool for managing passwords, provide `init`,`add`,`remov
 
 ## Commands
 
-1). First of all, you should `init` a password box with master password, the master password can be set by ENV(e.g. echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc && source ~/.bashrc)
+* help - `display help`
+* version - `display version`
+* init - `init password box or modify master password`
+* add - `add a new password or update old password`
+* remove - `remove passwords by ids or (category,account)(aliases rm,del,delete)`
+* list - `list all passwords(aliases ls)`
+* find - `find password by id,category,account,tag,site and so on`
+* upgrade - `upgrade to newest version(aliases up)`
+* generate - `a utility command for generating password(aliases gen)`
 
-```shell
-onepw init # master password set by ENV
+### help - `show help information`
+
+```sh
+# show help information of onepw
+$> onepw
+# or
+$> onepw help
+
+# show help information of specified command
+$> onepw help <COMMAND>
+# or
+$> onepw <COMMAND> -h
 ```
 
-Or
-```shell
-onepw init --master=MySecret
+### version - `show onepw version`
+
+```sh
+$> onepw version
+# or
+$> onepw -v
 ```
 
-2). And then, `add` a new password
+### init - `init password box`
+First of all, you should `init` a password box with master password.
+
+```sh
+# Will prompt for enter master password
+$> onepw init
+type the master password:
+```
+
+**NOTE**: The master password can be set by ENV variable PASSWORD_MASTER.
+
+### add - `add a new command or update old password`
 
 ![onepw-add-help.png](http://www.mkideal.com/images/onepw-add-help.png)
 
-```shell
+```sh
 $> onepw add -c=email -u user@example.com
-type the password:		# enter in terminal
-repeat the password:	# enter in terminal, too
+type the password:
+repeat the password:
 ```
 
-3). `list` all passwords
-```shell
+### list - `list all passwords, aliases ls`
+
+```sh
 $> onepw list
-```
-
-Or
-```shell
+# or
 $> onepw ls
 ```
 
-4). `remove` passwords by id or account
-```shell
-$> onepw rm <id1 [id2...]> [--all | -a]
-```
+### remove - `remove passwords by ids or account, aliases rm/del/delete`
 
-5). `find` passwords by id,category,account,...
-```shell
-$> onepw find <WORD>
-```
+![onepw-remove-help.png](http://www.mkideal.com/images/onepw-remove-help.png)
 
-6). You can use dropbox or bitbucket store passwords
+### find - `find passwords by id,category,account,...`
+
+![onepw-find-help.png](http://www.mkideal.com/images/onepw-find-help.png)
+
+### upgrade - `upgrade password.data, aliases up`
+
+### generate - `generate password, aliases gen`
+
+![onepw-gen-help.png](http://www.mkideal.com/images/onepw-gen-help.png)
+
+```sh
+$> onepw gen 12
+FA7vAeZML02r
+$> onepw gen 12 -cs
+iqva%kj*^!!f
+$> onepw gen 16 -cCdS
+0g1b^TgAUXAij2KC
+```
 
 ## Example
 
-```shell
+```sh
 $> mkdir mypasswords
 $> cd mypasswords
 $> echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc
@@ -95,7 +136,7 @@ $> onepw init
 $> onepw add -c email -u user@example.com
 type the password: 
 repeat the password: 
-password d9437f07af7c8b035a4fa9513ace449f updated
+password d9437f07af7c8b035a4fa9513ace449f added
 
 # list all passwords
 $> onepw ls
@@ -107,7 +148,7 @@ $> onepw ls
 
 # add a new password
 $> onepw add -c github -u hello --pw=123456 --cpw=123456
-password 3439d3178f35f56f4c3d6f27e7ccc9a7 updated
+password 3439d3178f35f56f4c3d6f27e7ccc9a7 added
 
 # list all passwords
 $> onepw ls
@@ -123,7 +164,7 @@ $> onepw ls
 $> onepw add -c email -u user2@gmail.com --site=gmail.com --tag=google
 type the password:
 repeat the password:
-password 2ca000f993a665337bebd4700cfd7c6c updated
+password 2ca000f993a665337bebd4700cfd7c6c added
 
 # list all passwords
 $> onepw ls
@@ -144,6 +185,21 @@ $> onepw find mail
 +---------+-------+------------------+--------+---------------------------+
 | d9437f0 | email | user@example.com | 123456 | 2016-04-29T00:54:36+08:00 |
 +---------+-------+------------------+--------+---------------------------+
+
+# find first password
+$> onepw find mail -f
++---------+-------+------------------+--------+---------------------------+
+| 2ca000f | email | user2@gmail.com  | 123456 | 2016-04-29T00:58:49+08:00 |
++---------+-------+------------------+--------+---------------------------+
+
+# find passwords, but only show password
+$> onepw find mail -p
+123456
+123456
+
+# ^TRY:
+# onepw find mail -pf
+
 $> onepw find hello
 +---------+--------+-------+--------+---------------------------+
 | 3439d31 | github | hello | 123456 | 2016-04-29T00:56:26+08:00 |
