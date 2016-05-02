@@ -22,7 +22,7 @@ var (
 )
 
 func newErrAmbiguous(passwords []*Password) error {
-	buf := bytes.NewBufferString("ambiguous:")
+	buf := bytes.NewBufferString("ambiguous:\n")
 	table := passwordPtrSlice(passwords)
 	sort.Stable(table)
 	textutil.WriteTable(buf, table)

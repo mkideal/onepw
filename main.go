@@ -30,6 +30,7 @@ func main() {
 		cli.Tree(find),
 		cli.Tree(upgrade),
 		cli.Tree(generate),
+		cli.Tree(info),
 	).Run(os.Args[1:]); err != nil {
 		fmt.Fprintln(colorable.NewColorableStderr(), err)
 		os.Exit(1)
@@ -509,5 +510,36 @@ var generate = &cli.Command{
 			ctx.Write([]byte{'\n'})
 		}
 		return nil
+	},
+}
+
+//--------------
+// info command
+//--------------
+type infoT struct {
+	cli.Helper
+	Config
+	All bool `cli:"a,all" usage:"show all found passwords"`
+}
+
+var info = &cli.Command{
+	Name:        "info",
+	Desc:        "show low-level information of password",
+	Text:        "Usage: onepw info <ids...>",
+	Argv:        func() interface{} { return new(infoT) },
+	CanSubRoute: true,
+
+	OnBefore: func(ctx *cli.Context) error {
+		argv := ctx.Argv().(*infoT)
+		if argv.Help || len(ctx.FreedomArgs()) == 0 {
+			ctx.WriteUsage()
+			return cli.ExitError
+		}
+		return nil
+	},
+
+	Fn: func(ctx *cli.Context) error {
+		argv := ctx.Argv().(*infoT)
+		return box.Inspect(ctx, ctx.FreedomArgs(), argv.All)
 	},
 }

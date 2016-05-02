@@ -216,37 +216,42 @@ func (box *Box) Remove(ids []string, all bool) ([]string, error) {
 	if box.masterPassword == "" {
 		return nil, errEmptyMasterPassword
 	}
-	deletedIds := []string{}
-	passwords := make([]*Password, 0)
-
-	for _, id := range ids {
-		size := len(deletedIds)
-		if foundPw, ok := box.passwords[id]; !ok {
-			for _, pw := range box.passwords {
-				if strings.HasPrefix(pw.ID, id) {
-					deletedIds = append(deletedIds, pw.ID)
-					passwords = append(passwords, pw)
-				}
-			}
-		} else {
-			deletedIds = append(deletedIds, id)
-			passwords = append(passwords, foundPw)
-		}
-		if len(deletedIds) == size {
-			return nil, newErrPasswordNotFound(id)
-		}
-		if len(deletedIds) > 1+size && !all {
-			return nil, newErrAmbiguous(passwords[size:])
-		}
+	passwords, err := box.findPasswords(ids, all)
+	if err != nil {
+		return nil, err
 	}
-	deleted := make([]string, 0, len(deletedIds))
-	for _, id := range deletedIds {
+	deleted := make([]string, 0, len(passwords))
+	for _, pw := range passwords {
+		id := pw.ID
 		if _, ok := box.passwords[id]; ok {
 			delete(box.passwords, id)
 			deleted = append(deleted, id)
 		}
 	}
 	return deleted, box.save()
+}
+
+func (box *Box) findPasswords(ids []string, all bool) ([]*Password, error) {
+	passwords := make([]*Password, 0, len(ids))
+	for _, id := range ids {
+		size := len(passwords)
+		if foundPw, ok := box.passwords[id]; !ok {
+			for _, pw := range box.passwords {
+				if strings.HasPrefix(pw.ID, id) {
+					passwords = append(passwords, pw)
+				}
+			}
+		} else {
+			passwords = append(passwords, foundPw)
+		}
+		if len(passwords) == size {
+			return nil, newErrPasswordNotFound(id)
+		}
+		if len(passwords) > 1+size && !all {
+			return nil, newErrAmbiguous(passwords[size:])
+		}
+	}
+	return passwords, nil
 }
 
 // RemoveByAccount removes passwords by category and account
@@ -311,6 +316,25 @@ func (box *Box) List(w io.Writer, noHeader bool) error {
 		table = textutil.AddTableHeader(table, passwordHeader)
 	}
 	textutil.WriteTable(w, table, box.colorID(w, !noHeader))
+	return nil
+}
+
+// Inspect show low-level information of password
+func (box *Box) Inspect(w io.Writer, ids []string, all bool) error {
+	passwords, err := box.findPasswords(ids, all)
+	if err != nil {
+		return err
+	}
+	sort.Sort(passwordPtrSlice(passwords))
+	prefix := "    "
+	fmt.Fprintf(w, "[\n%s", prefix)
+	for i, pw := range passwords {
+		if i != 0 {
+			fmt.Fprintf(w, ",\n%s", prefix)
+		}
+		pw.inspect(w, prefix)
+	}
+	fmt.Fprintf(w, "\n]\n")
 	return nil
 }
 

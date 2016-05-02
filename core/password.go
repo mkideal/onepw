@@ -2,11 +2,25 @@ package core
 
 import (
 	"crypto/cipher"
+	"encoding/json"
+	"io"
 	"strings"
 	"time"
 )
 
 const shortIDLength = 7
+
+type passwordInspect struct {
+	ID            string
+	Category      string
+	Account       string
+	Password      string
+	Site          string
+	Tags          []string
+	Ext           string
+	CreatedAt     string
+	LastUpdatedAt string
+}
 
 // PasswordBasic is basic of Password
 type PasswordBasic struct {
@@ -141,6 +155,22 @@ func (pw *Password) migrate(from *Password) {
 	if from.PasswordBasic.Tags != nil && len(from.PasswordBasic.Tags) != 0 {
 		pw.PasswordBasic.Tags = make([]string, len(from.PasswordBasic.Tags))
 		copy(pw.PasswordBasic.Tags, from.PasswordBasic.Tags)
+	}
+}
+
+func (pw *Password) inspect(w io.Writer, prefix string) {
+	v := new(passwordInspect)
+	v.ID = pw.ID
+	v.Account = pw.PlainAccount
+	v.Category = pw.Category
+	v.Password = pw.PlainPassword
+	v.Site = pw.Site
+	v.Tags = pw.Tags
+	v.Ext = pw.Ext
+	v.CreatedAt = time.Unix(pw.CreatedAt, 0).Format(time.RFC3339)
+	v.LastUpdatedAt = time.Unix(pw.LastUpdatedAt, 0).Format(time.RFC3339)
+	if data, err := json.MarshalIndent(v, prefix, "    "); err == nil {
+		w.Write(data)
 	}
 }
 

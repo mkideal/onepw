@@ -7,7 +7,7 @@ go get github.com/mkideal/onepw
 ```
 
 ## What's this
-onepw is a command line tool for managing passwords, provide `init`,`add`,`remove`,`list`,`find` commands. You **MUST** remember the `master password`, and don't tell anyone!
+onepw is a command line tool for managing passwords, provide `init`,`add`,`remove`,`list`,`find`,`generate`,`info` commands. You **MUST** remember the `master password`, and don't tell anyone!
 
 `onepw` built by [**mkideal/cli**](https://github.com/mkideal/cli).
 
@@ -46,6 +46,7 @@ onepw is a command line tool for managing passwords, provide `init`,`add`,`remov
 * find - `find password by id,category,account,tag,site and so on`
 * upgrade - `upgrade to newest version(aliases up)`
 * generate - `a utility command for generating password(aliases gen)`
+* info - `show low-level information of password`
 
 ### help - `show help information`
 
@@ -97,7 +98,7 @@ $> onepw list
 # or
 $> onepw ls
 ```
-
+`
 ### remove - `remove passwords by ids or account, aliases rm/del/delete`
 
 ![onepw-remove-help.png](http://www.mkideal.com/images/onepw-remove-help.png)
@@ -105,8 +106,6 @@ $> onepw ls
 ### find - `find passwords by id,category,account,...`
 
 ![onepw-find-help.png](http://www.mkideal.com/images/onepw-find-help.png)
-
-### upgrade - `upgrade password.data, aliases up`
 
 ### generate - `generate password, aliases gen`
 
