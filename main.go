@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/labstack/gommon/color"
+	"github.com/mattn/go-colorable"
 	"github.com/mkideal/cli"
 	"github.com/mkideal/onepw/core"
 	"github.com/mkideal/pkg/debug"
@@ -24,7 +25,7 @@ func main() {
 		cli.Tree(find),
 		cli.Tree(upgrade),
 	).Run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(colorable.NewColorableStderr(), err)
 		os.Exit(1)
 	}
 }
