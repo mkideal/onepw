@@ -366,16 +366,22 @@ func (box *Box) Find(w io.Writer, word string, justPassword, justFirst bool) err
 	return nil
 }
 
-func (box *Box) colorID(w io.Writer, hasHeader bool) textutil.CellStyleFunc {
-	return func(row, col int, cell string) string {
-		if col != 0 || (row == 0 && hasHeader) {
-			return cell
-		}
-		if clr, ok := w.(colorable); ok {
-			return clr.Color().Cyan(cell)
-		}
-		return cell
+// color ID style
+type colorIDStyle struct {
+	textutil.DefaultStyle
+	hasHeader bool
+}
+
+func (style colorIDStyle) CellRender(row, col int, cell string, cw *textutil.ColorWriter) {
+	if col != 0 || (row == 0 && style.hasHeader) {
+		style.DefaultStyle.CellRender(row, col, cell, cw)
+	} else {
+		fmt.Fprint(cw, cw.Cyan(cell))
 	}
+}
+
+func (box *Box) colorID(w io.Writer, hasHeader bool) textutil.TableStyler {
+	return colorIDStyle{hasHeader: hasHeader}
 }
 
 func (box *Box) sortedPasswords() []Password {
