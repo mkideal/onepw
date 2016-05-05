@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -50,13 +51,17 @@ type Configure interface {
 
 // Config implementes Configure interface, represents onepw config
 type Config struct {
-	Master      string `pw:"master" usage:"master password" dft:"$PASSWORD_MASTER" prompt:"type the master password"`
+	Master      string `pw:"master" usage:"master password" dft:"$ONEPW_MASTER" prompt:"type the master password"`
 	EnableDebug bool   `cli:"debug" usage:"usage debug mode" dft:"false"`
 }
 
 // Filename returns password data filename
 func (cfg Config) Filename() string {
-	return "password.data"
+	filename := os.Getenv("ONEPW_FILE")
+	if filename == "" {
+		filename = "password.data"
+	}
+	return filename
 }
 
 // MasterPassword returns master password
@@ -192,6 +197,12 @@ var initCmd = &cli.Command{
 		}
 		if _, err := os.Lstat(argv.Filename()); err != nil {
 			if os.IsNotExist(err) {
+				dir, _ := filepath.Split(argv.Filename())
+				if dir != "" && dir != "." {
+					if err := os.MkdirAll(dir, 0755); err != nil {
+						return err
+					}
+				}
 				file, err := os.Create(argv.Filename())
 				if err != nil {
 					return err
