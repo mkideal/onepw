@@ -3,6 +3,7 @@ CHANGELOG
 
 # HEAD
 
+* Replace env varible PASSWORD_MASTER with ONEPW_MASTER, and add new env varible: ONEPW_FILE
 * Add `-p(--just-password)` and `-f(--just-first)` flags for find command
 
 # v0.0.2

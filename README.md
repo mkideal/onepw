@@ -123,10 +123,8 @@ $> onepw gen 16 -cCdS
 ## Example
 
 ```sh
-$> mkdir mypasswords
-$> cd mypasswords
-$> echo "export PASSWORD_MASTER=MySecret" >> ~/.bashrc
-$> source ~/.bashrc
+$> echo "export ONEPW_FILE=~/mypasswords/password.data"
+$> echo "export ONEPW_MASTER=MySecret"
 
 # init password box
 $> onepw init
