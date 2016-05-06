@@ -116,7 +116,7 @@ var root = &cli.Command{
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*rootT)
-		if argv.Help || len(ctx.Args()) == 0 {
+		if argv.Help || len(ctx.NativeArgs()) == 0 {
 			ctx.WriteUsage()
 			return cli.ExitError
 		}
@@ -310,7 +310,7 @@ var remove = &cli.Command{
 			argv       = ctx.Argv().(*removeT)
 			deletedIds []string
 			err        error
-			ids        = ctx.FreedomArgs()
+			ids        = ctx.Args()
 		)
 		if len(ids) > 0 {
 			deletedIds, err = box.Remove(ids, argv.All)
@@ -379,7 +379,7 @@ var find = &cli.Command{
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*findT)
-		if argv.Help || len(ctx.FreedomArgs()) != 1 {
+		if argv.Help || len(ctx.Args()) != 1 {
 			ctx.WriteUsage()
 			return cli.ExitError
 		}
@@ -410,7 +410,7 @@ var upgrade = &cli.Command{
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*upgradeT)
-		if argv.Help || len(ctx.Args()) != 0 {
+		if argv.Help || len(ctx.NativeArgs()) != 0 {
 			ctx.WriteUsage()
 			return cli.ExitError
 		}
@@ -453,7 +453,7 @@ func (argv *generateT) Validate(ctx *cli.Context) error {
 	if argv.Num == 0 {
 		return fmt.Errorf("N must > 0")
 	}
-	args := ctx.FreedomArgs()
+	args := ctx.Args()
 	if len(args) == 1 {
 		length, err := strconv.Atoi(args[0])
 		if err != nil {
@@ -479,7 +479,7 @@ var generate = &cli.Command{
 
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*generateT)
-		if argv.Help || len(ctx.FreedomArgs()) != 1 {
+		if argv.Help || len(ctx.Args()) != 1 {
 			ctx.WriteUsage()
 			return nil
 		}
@@ -542,7 +542,7 @@ var info = &cli.Command{
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*infoT)
-		if argv.Help || len(ctx.FreedomArgs()) == 0 {
+		if argv.Help || len(ctx.Args()) == 0 {
 			ctx.WriteUsage()
 			return cli.ExitError
 		}
@@ -551,6 +551,6 @@ var info = &cli.Command{
 
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*infoT)
-		return box.Inspect(ctx, ctx.FreedomArgs(), argv.All)
+		return box.Inspect(ctx, ctx.Args(), argv.All)
 	},
 }
