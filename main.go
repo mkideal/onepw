@@ -91,35 +91,15 @@ var root = &cli.Command{
 		"onepw": color.Bold("onepw"),
 		"repo":  color.Blue("https://github.com/mkideal/onepw"),
 	}),
-	Text: textutil.Tpl(`{{.usage}}: {{.onepw}} <COMMAND> [OPTIONS]
-
-{{.basicworkflow}}:
-
-	#1. init, create file password.data
-	$> {{.onepw}} init
-
-	#2. add a new password
-	$> {{.onepw}} add -c=email -u user@example.com
-	type the password:
-	repeat the password:
-
-	#3. list all passwords
-	$> {{.onepw}} ls
-
-	#optional
-	# upload cloud(e.g. dropbox or github or bitbucket ...)`, map[string]string{
-		"onepw":         color.Bold("onepw"),
-		"usage":         color.Bold("Usage"),
-		"basicworkflow": color.Bold("Basic workflow"),
+	Text: textutil.Tpl(`{{.usage}}: {{.onepw}} <COMMAND> [OPTIONS]`, map[string]string{
+		"onepw": color.Bold("onepw"),
+		"usage": color.Bold("Usage"),
 	}),
-	Argv: func() interface{} { return new(rootT) },
+	Argv:     func() interface{} { return new(rootT) },
+	NeedArgs: true,
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*rootT)
-		if argv.Help || len(ctx.NativeArgs()) == 0 {
-			ctx.WriteUsage()
-			return cli.ExitError
-		}
 		if argv.Version {
 			ctx.String("%s\n", appVersion)
 			return cli.ExitError
@@ -191,10 +171,6 @@ var initCmd = &cli.Command{
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*initT)
-		if argv.Help {
-			ctx.WriteUsage()
-			return cli.ExitError
-		}
 		if _, err := os.Lstat(argv.Filename()); err != nil {
 			if os.IsNotExist(err) {
 				dir, _ := filepath.Split(argv.Filename())
@@ -253,15 +229,6 @@ var add = &cli.Command{
 		return argv
 	},
 
-	OnBefore: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*addT)
-		if argv.Help {
-			ctx.WriteUsage()
-			return cli.ExitError
-		}
-		return nil
-	},
-
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*addT)
 		argv.Password.PlainPassword = argv.Pw
@@ -295,15 +262,6 @@ var remove = &cli.Command{
 	Text:        "Usage: onepw rm [ids...] [OPTIONS]",
 	Argv:        func() interface{} { return new(removeT) },
 	CanSubRoute: true,
-
-	OnBefore: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*removeT)
-		if argv.Help {
-			ctx.WriteUsage()
-			return cli.ExitError
-		}
-		return nil
-	},
 
 	Fn: func(ctx *cli.Context) error {
 		var (
@@ -344,15 +302,6 @@ var list = &cli.Command{
 	Desc:    "list all passwords",
 	Argv:    func() interface{} { return new(listT) },
 
-	OnBefore: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*listT)
-		if argv.Help {
-			ctx.WriteUsage()
-			return cli.ExitError
-		}
-		return nil
-	},
-
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*listT)
 		return box.List(ctx, argv.NoHeader)
@@ -378,8 +327,7 @@ var find = &cli.Command{
 	CanSubRoute: true,
 
 	OnBefore: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*findT)
-		if argv.Help || len(ctx.Args()) != 1 {
+		if len(ctx.Args()) != 1 {
 			ctx.WriteUsage()
 			return cli.ExitError
 		}
@@ -407,15 +355,6 @@ var upgrade = &cli.Command{
 	Aliases: []string{"up"},
 	Desc:    "upgrade to newest version",
 	Argv:    func() interface{} { return new(upgradeT) },
-
-	OnBefore: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*upgradeT)
-		if argv.Help || len(ctx.NativeArgs()) != 0 {
-			ctx.WriteUsage()
-			return cli.ExitError
-		}
-		return nil
-	},
 
 	Fn: func(ctx *cli.Context) error {
 		from, to, err := box.Upgrade()
@@ -539,15 +478,7 @@ var info = &cli.Command{
 	Text:        "Usage: onepw info <ids...>",
 	Argv:        func() interface{} { return new(infoT) },
 	CanSubRoute: true,
-
-	OnBefore: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*infoT)
-		if argv.Help || len(ctx.Args()) == 0 {
-			ctx.WriteUsage()
-			return cli.ExitError
-		}
-		return nil
-	},
+	NeedArgs:    true,
 
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*infoT)
