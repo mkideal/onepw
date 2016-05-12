@@ -1,5 +1,7 @@
 # onepw [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/mkideal/onepw/master/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/mkideal/onepw)](https://goreportcard.com/report/github.com/mkideal/onepw)
 
+![screenshot.png](http://www.mkideal.com/images/onepw-screenshot.png)
+
 ## Install
 
 ```sh
@@ -15,25 +17,25 @@ onepw is a command line tool for managing passwords, provide `init`,`add`,`remov
 
 1) Generate Key by master password
 
-	+--------+         +-----+
+	o--------o         o-----o
 	| Master | MD5Sum  |     |
 	| Pass   |========>| Key |
 	| Word   |         |     |
-	+--------+         +-----+
+	o--------o         o-----o
 
 2) Encrypt account and password
 
-	+-----------+
+	o-----------o
 	|           |
-	| Random IV |==|
-	|           |  |                +------------+
-	+-----------+  | CFB Encrypter  |            |
+	| Random IV |==o
+	|           |  |                o------------o
+	o-----------o  | CFB Encrypter  |            |
                    |===============>| CipherText |
-	+-----------+  | AES Cipher     |            |
-	|           |  | with Key       +------------+
-	| PlainText |==|
+	o-----------o  | AES Cipher     |            |
+	|           |  | with Key       o------------o
+	| PlainText |==o
 	|           |
-	+-----------+
+	o-----------o
 
 ## Commands
 
