@@ -58,10 +58,10 @@ $> onepw
 # or
 $> onepw help
 
-# show help information of specified command
-$> onepw help <COMMAND>
+# show help information of specific command
+$> onepw help COMMAND
 # or
-$> onepw <COMMAND> -h
+$> onepw COMMAND -h
 ```
 
 ### version - `show onepw version`
