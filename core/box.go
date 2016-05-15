@@ -22,7 +22,7 @@ func init() {
 
 const (
 	masterPasswordID = "0"
-	currentVersion   = 1
+	currentVersion   = 2
 )
 
 // BoxRepository define repo for storing passwords
@@ -100,7 +100,12 @@ func NewBox(repo BoxRepository) *Box {
 }
 
 func (box *Box) generateMasterPasswordEntity() *Password {
-	pw := NewPassword("master", "master", sha1sum(box.masterPassword), "")
+	randomAccount := make([]byte, 64)
+	n, err := crand.Read(randomAccount)
+	if err != nil {
+		debug.Panicf("randomAccount error: %v", err)
+	}
+	pw := NewPassword("master", string(randomAccount[:n]), sha1sum(box.masterPassword), "")
 	pw.ID = masterPasswordID
 	return pw
 }
