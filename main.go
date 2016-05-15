@@ -171,6 +171,17 @@ var initCmd = &cli.Command{
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*initT)
+		if argv.Update {
+			return nil
+		}
+		cpw, err := prompt.Password("repeat the master password: ")
+		if err != nil {
+			return err
+		}
+		if argv.Master != string(cpw) {
+			return fmt.Errorf(ctx.Color().Red("master password mismatch"))
+		}
+
 		if _, err := os.Lstat(argv.Filename()); err != nil {
 			if os.IsNotExist(err) {
 				dir, _ := filepath.Split(argv.Filename())
@@ -192,11 +203,18 @@ var initCmd = &cli.Command{
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*initT)
 		if argv.Update {
-			data, err := prompt.Password("type the new master password: ")
+			pw, err := prompt.Password("type the new master password: ")
 			if err != nil {
 				return err
 			}
-			return box.Update(string(data))
+			cpw, err := prompt.Password("repeat the new master password: ")
+			if err != nil {
+				return err
+			}
+			if string(pw) != string(cpw) {
+				return fmt.Errorf(ctx.Color().Red("new master password mismatch"))
+			}
+			return box.Update(string(pw))
 		}
 		return nil
 	},
