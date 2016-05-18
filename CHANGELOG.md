@@ -1,7 +1,7 @@
 CHANGELOG
 =========
 
-# v0.0.3
+# v0.1.0
 
 * Fix master account(random account, and you **MUST** upgrade password by `onepw up`).
 * Replace env varible PASSWORD_MASTER with ONEPW_MASTER, and add new env varible: ONEPW_FILE
