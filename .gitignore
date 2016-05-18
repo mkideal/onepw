@@ -1,4 +1,5 @@
 *.swp
+*.tar.gz
 onepw
 password.data
 example/
