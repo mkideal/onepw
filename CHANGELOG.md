@@ -1,8 +1,9 @@
 CHANGELOG
 =========
 
-# HEAD
+# v0.0.3
 
+* Fix master account(random account, and you **MUST** upgrade password by `onepw up`).
 * Replace env varible PASSWORD_MASTER with ONEPW_MASTER, and add new env varible: ONEPW_FILE
 * Add `-p(--just-password)` and `-f(--just-first)` flags for find command
 
