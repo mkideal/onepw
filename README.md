@@ -17,11 +17,11 @@ onepw is a command line tool for managing passwords, provide `init`,`add`,`remov
 
 1) Generate Key by master password
 
-	o--------o         o-----o
-	| Master | MD5Sum  |     |
-	| Pass   |========>| Key |
-	| Word   |         |     |
-	o--------o         o-----o
+	o--------o             o-----o
+	| Master | KDF: scrypt |     |
+	| Pass   |============>| Key |
+	| Word   |             |     |
+	o--------o             o-----o
 
 2) Encrypt account and password
 
