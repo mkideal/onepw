@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/crypto/scrypt"
+
 	"github.com/mkideal/pkg/debug"
 	"github.com/mkideal/pkg/textutil"
 )
@@ -22,7 +24,7 @@ func init() {
 
 const (
 	masterPasswordID = "0"
-	currentVersion   = 2
+	currentVersion   = 3
 )
 
 // BoxRepository define repo for storing passwords
@@ -33,6 +35,7 @@ type BoxRepository interface {
 
 type boxStore struct {
 	Version   int
+	Salt      []byte
 	Master    Password
 	Passwords []Password
 }
@@ -62,10 +65,9 @@ func (box *Box) Init(masterPassword string) error {
 	if err := box.load(); err != nil {
 		return err
 	}
-	for _, pw := range box.passwords {
-		if err := box.encrypt(pw); err != nil {
-			return err
-		}
+
+	if err := box.encryptAll(); err != nil {
+		return err
 	}
 	return box.save()
 }
@@ -79,12 +81,14 @@ func (box *Box) Update(newMasterPassword string) error {
 	}
 	box.masterPassword = newMasterPassword
 	if box.store.Version > 0 {
-		box.store.Master = *box.generateMasterPasswordEntity()
-	}
-	for _, pw := range box.passwords {
-		if err := box.encrypt(pw); err != nil {
+		var err error
+		box.store.Master, err = box.generateMasterPasswordEntity()
+		if err != nil {
 			return err
 		}
+	}
+	if err := box.encryptAll(); err != nil {
+		return err
 	}
 	return box.save()
 }
@@ -99,15 +103,22 @@ func NewBox(repo BoxRepository) *Box {
 	return box
 }
 
-func (box *Box) generateMasterPasswordEntity() *Password {
+func (box *Box) generateMasterPasswordEntity() (Password, error) {
 	randomAccount := make([]byte, 64)
 	n, err := crand.Read(randomAccount)
 	if err != nil {
-		debug.Panicf("randomAccount error: %v", err)
+		return Password{}, err
 	}
-	pw := NewPassword("master", string(randomAccount[:n]), sha1sum(box.masterPassword), "")
+	if err := box.initSalt(true); err != nil {
+		return Password{}, err
+	}
+	dk, err := derivedKey(box.masterPassword, box.store.Salt)
+	if err != nil {
+		return Password{}, err
+	}
+	pw := NewPassword("master", string(randomAccount[:n]), string(dk), "")
 	pw.ID = masterPasswordID
-	return pw
+	return *pw, nil
 }
 
 func (box *Box) load() error {
@@ -121,7 +132,7 @@ func (box *Box) load() error {
 
 	// decrypt master password
 	if box.store.Master.ID != "" {
-		if err := box.decrypt(&box.store.Master); err != nil {
+		if err := box.decrypt(&box.store.Master, nil); err != nil {
 			return err
 		}
 	}
@@ -130,10 +141,25 @@ func (box *Box) load() error {
 	if box.store.Version >= 1 {
 		// check master password since version 1
 		if box.store.Master.ID == "" {
-			box.store.Master = *box.generateMasterPasswordEntity()
-		} else if box.store.Master.PlainPassword != sha1sum(box.masterPassword) {
-			debug.Debugf("master: %s vs %s", box.store.Master.PlainPassword, box.masterPassword)
-			return errMasterPassword
+			box.store.Master, err = box.generateMasterPasswordEntity()
+			if err != nil {
+				return err
+			}
+		} else {
+			salt := box.store.Salt
+			got := ""
+			if salt == nil || len(salt) == 0 {
+				got = sha1sum([]byte(box.masterPassword))
+			} else {
+				dk, err := derivedKey(box.masterPassword, box.store.Salt)
+				if err != nil {
+					return err
+				}
+				got = string(dk)
+			}
+			if box.store.Master.PlainPassword != got {
+				return errMasterPassword
+			}
 		}
 	}
 
@@ -143,7 +169,7 @@ func (box *Box) load() error {
 func (box *Box) save() error {
 	// encrypt master password
 	if box.store.Master.ID != "" {
-		if err := box.encrypt(&box.store.Master); err != nil {
+		if err := box.encrypt(&box.store.Master, nil); err != nil {
 			return err
 		}
 	}
@@ -161,8 +187,17 @@ func (box *Box) Upgrade() (from, to int, err error) {
 	defer box.Unlock()
 
 	from, to = box.store.Version, currentVersion
-	box.store.Master = *box.generateMasterPasswordEntity()
+	box.store.Master, err = box.generateMasterPasswordEntity()
+	if err != nil {
+		return
+	}
 	box.store.Version = to
+	if err = box.initSalt(false); err != nil {
+		return
+	}
+	if err = box.encryptAll(); err != nil {
+		return
+	}
 	err = box.save()
 	return
 }
@@ -204,7 +239,7 @@ func (box *Box) Add(pw *Password) (id string, new bool, err error) {
 		}
 		new = true
 	}
-	if err = box.encrypt(pw); err != nil {
+	if err = box.encrypt(pw, nil); err != nil {
 		return
 	}
 	box.passwords[pw.ID] = pw
@@ -411,10 +446,8 @@ func (box *Box) allocID() (string, error) {
 }
 
 func (box *Box) marshal() ([]byte, error) {
-	for _, pw := range box.passwords {
-		if err := box.encrypt(pw); err != nil {
-			return nil, err
-		}
+	if err := box.encryptAll(); err != nil {
+		return nil, err
 	}
 	box.store.Passwords = box.sortedPasswords()
 	return json.MarshalIndent(box.store, "", "    ")
@@ -436,18 +469,58 @@ func (box *Box) unmarshal(data []byte) error {
 
 	for i := range box.store.Passwords {
 		pw := &(box.store.Passwords[i])
-		if box.masterPassword != "" {
-			if err := box.decrypt(pw); err != nil {
-				return err
-			}
-		}
 		box.passwords[pw.ID] = pw
+	}
+	if box.masterPassword != "" {
+		if err := box.decryptAll(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (box *Box) encrypt(pw *Password) error {
-	block, err := aes.NewCipher([]byte(md5sum(box.masterPassword)))
+func derivedKey(password string, salt []byte) ([]byte, error) {
+	if salt == nil || len(salt) == 0 {
+		// Deprecated: insecure
+		return []byte(md5sum([]byte(password))), nil
+	}
+	return scrypt.Key([]byte(password), salt, 4096, 8, 1, 32)
+}
+
+func (box *Box) initSalt(reinit bool) error {
+	salt := box.store.Salt
+	if salt == nil || len(salt) == 0 || reinit {
+		salt = make([]byte, 64)
+		if _, err := crand.Read(salt); err != nil {
+			return err
+		}
+		box.store.Salt = salt
+	}
+	return nil
+}
+
+func (box *Box) encryptAll() error {
+	dk, err := derivedKey(box.masterPassword, box.store.Salt)
+	if err != nil {
+		return err
+	}
+	for _, pw := range box.passwords {
+		if err = box.encrypt(pw, dk); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (box *Box) encrypt(pw *Password, dk []byte) error {
+	if dk == nil {
+		var err error
+		dk, err = derivedKey(box.masterPassword, box.store.Salt)
+		if err != nil {
+			return err
+		}
+	}
+	block, err := aes.NewCipher(dk)
 	if err != nil {
 		return err
 	}
@@ -468,8 +541,32 @@ func (box *Box) encrypt(pw *Password) error {
 	return nil
 }
 
-func (box *Box) decrypt(pw *Password) error {
-	block, err := aes.NewCipher([]byte(md5sum(box.masterPassword)))
+func (box *Box) decryptAll() error {
+	dk, err := derivedKey(box.masterPassword, box.store.Salt)
+	if err != nil {
+		return err
+	}
+	for _, pw := range box.passwords {
+		if err = box.decrypt(pw, dk); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (box *Box) decrypt(pw *Password, dk []byte) error {
+	if dk == nil {
+		var err error
+		dk, err = derivedKey(box.masterPassword, box.store.Salt)
+		if err != nil {
+			return err
+		}
+	}
+	dk, err := derivedKey(box.masterPassword, box.store.Salt)
+	if err != nil {
+		return err
+	}
+	block, err := aes.NewCipher(dk)
 	if err != nil {
 		return err
 	}
