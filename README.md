@@ -9,9 +9,7 @@ go get github.com/mkideal/onepw
 ```
 
 ## What's this
-onepw is a command line tool for managing passwords, provide `init`,`add`,`remove`,`list`,`find`,`generate`,`info` commands. You **MUST** remember the `master password`, and don't tell anyone!
-
-`onepw` built by [**mkideal/cli**](https://github.com/mkideal/cli).
+onepw is a command line tool for managing passwords, provides `init`,`add`,`remove`,`list`,`find`,`generate`,`info` commands. You **MUST** remember the `master password`, and don't tell anyone!
 
 ## Principles
 
@@ -81,11 +79,43 @@ $> onepw init
 type the master password:
 ```
 
-**NOTE**: The master password can be set by ENV variable PASSWORD_MASTER.
+**NOTE**: The master password can be set by ENV variable ONEPW_MASTER.
 
 ### add - `add a new command or update old password`
 
-![onepw-add-help.png](http://www.mkideal.com/images/onepw-add-help.png)
+```sh
+Options:
+
+  -h, --help
+      display help information
+
+  --master[=$ONEPW_MASTER]
+      master password
+
+  --debug[=false]
+      usage debug mode
+
+  -c, --category
+      category of password
+
+  -u, --account
+      account of password
+
+  --site
+      website of password
+
+  --tag
+      tags of password
+
+  --id
+      password id for updating
+
+  --pw, --password
+      the password
+
+  --cpw, --confirm-password
+      confirm password
+```
 
 ```sh
 $> onepw add -c=email -u user@example.com
@@ -96,22 +126,98 @@ repeat the password:
 ### list - `list all passwords, aliases ls`
 
 ```sh
+Options:
+
+  -h, --help
+      display help information
+
+  --master[=$ONEPW_MASTER]
+      master password
+
+  --debug[=false]
+      usage debug mode
+
+  --no-header[=false]
+      don't print header line
+```
+
+```sh
 $> onepw list
 # or
 $> onepw ls
 ```
-`
+
 ### remove - `remove passwords by ids or account, aliases rm/del/delete`
 
-![onepw-remove-help.png](http://www.mkideal.com/images/onepw-remove-help.png)
+```sh
+Usage: onepw rm [ids...] [OPTIONS]
+
+Options:
+
+  -h, --help
+      display help information
+
+  --master[=$ONEPW_MASTER]
+      master password
+
+  --debug[=false]
+      usage debug mode
+
+  -a, --all[=false]
+      remove all found passwords
+```
 
 ### find - `find passwords by id,category,account,...`
 
-![onepw-find-help.png](http://www.mkideal.com/images/onepw-find-help.png)
+```sh
+Usage: onepw find <WORD>
+
+Options:
+
+  -h, --help
+      display help information
+
+  --master[=$ONEPW_MASTER]
+      master password
+
+  --debug[=false]
+      usage debug mode
+
+  -p, --just-password[=false]
+      only show password
+
+  -f, --just-first[=false]
+      only show first result
+```
 
 ### generate - `generate password, aliases gen`
 
-![onepw-gen-help.png](http://www.mkideal.com/images/onepw-gen-help.png)
+```sh
+Usage: onepw gen [OPTIONS] LEN
+
+Options:
+
+  -h, --help
+      display help information
+
+  -n, --number=N[=1]
+      number of generated passwords
+
+  -d, --digit[=false]
+      whether the password contains digit
+
+  -c, --lower-char[=false]
+      whether the password contains lowercase character
+
+  -C, --upper-char[=false]
+      whether the password contains uppercase character
+
+  -s, --special-char[=false]
+      whether the password contains the special character
+
+  --sset, --special-set
+      custom special character set
+```
 
 ```sh
 $> onepw gen 12
@@ -120,6 +226,26 @@ $> onepw gen 12 -cs
 iqva%kj*^!!f
 $> onepw gen 16 -cCdS
 0g1b^TgAUXAij2KC
+```
+
+### info - `show low-level information of password`
+
+```sh
+Usage: onepw info <ids...>
+
+Options:
+
+  -h, --help
+      display help information
+
+  --master[=$ONEPW_MASTER]
+      master password
+
+  --debug[=false]
+      usage debug mode
+
+  -a, --all
+      show all found passwords
 ```
 
 ## Example
