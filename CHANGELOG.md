@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+# HEAD
+
+* Using crypto/rand instead of math/rand for generating password.
+
 # v0.2.0
 
 * Using scrypt generates key for AES-256 instead of md5sum(you **MUST** upgrade password by `onepw up`).
