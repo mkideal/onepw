@@ -2,13 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Bowery/prompt"
 	"github.com/labstack/gommon/color"
@@ -445,7 +445,6 @@ var generate = &cli.Command{
 			argv.ContainLowerChar = true
 			argv.ContainUpperChar = true
 		}
-		rand.Seed(time.Now().UnixNano())
 
 		charSetBuff := bytes.NewBufferString("")
 		if argv.ContainDigit {
@@ -472,7 +471,11 @@ var generate = &cli.Command{
 		for i := 0; i < int(argv.Num); i++ {
 			pw := make([]byte, argv.length)
 			for j := 0; j < argv.length; j++ {
-				pw[j] = charSet[rand.Intn(charSetLength)]
+				index, err := rand.Int(rand.Reader, big.NewInt(int64(charSetLength)))
+				if err != nil {
+					return err
+				}
+				pw[j] = charSet[int(index.Int64())]
 			}
 			ctx.Write(pw)
 			ctx.Write([]byte{'\n'})
