@@ -95,8 +95,8 @@ var root = &cli.Command{
 		"onepw": color.Bold("onepw"),
 		"usage": color.Bold("Usage"),
 	}),
-	Argv:     func() interface{} { return new(rootT) },
-	NeedArgs: true,
+	Argv:   func() interface{} { return new(rootT) },
+	NumArg: cli.AtLeast(1),
 
 	OnBefore: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*rootT)
@@ -499,7 +499,7 @@ var info = &cli.Command{
 	Text:        "Usage: onepw info <ids...>",
 	Argv:        func() interface{} { return new(infoT) },
 	CanSubRoute: true,
-	NeedArgs:    true,
+	NumArg:      cli.AtLeast(1),
 
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*infoT)
