@@ -311,7 +311,8 @@ var remove = &cli.Command{
 type listT struct {
 	cli.Helper
 	Config
-	NoHeader bool `cli:"no-header" usage:"don't print header line" dft:"false"`
+	NoHeader   bool `cli:"no-header" usage:"don't print header line" dft:"false"`
+	ShowHidden bool `cli:"H,hidden" usage:"whether list hidden passwords"`
 }
 
 var list = &cli.Command{
@@ -322,7 +323,7 @@ var list = &cli.Command{
 
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*listT)
-		return box.List(ctx, argv.NoHeader)
+		return box.List(ctx, argv.NoHeader, argv.ShowHidden)
 	},
 }
 

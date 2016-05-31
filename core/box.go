@@ -344,14 +344,14 @@ func (box *Box) find(cond func(*Password) bool) []*Password {
 }
 
 // List writes all passwords to specified writer
-func (box *Box) List(w io.Writer, noHeader bool) error {
+func (box *Box) List(w io.Writer, noHeader, showHidden bool) error {
 	box.RLock()
 	defer box.RUnlock()
 	if box.masterPassword == "" {
 		return errEmptyMasterPassword
 	}
 	var table textutil.Table
-	table = passwordSlice(box.sortedPasswords())
+	table = passwordSlice(box.sortedPasswords(showHidden))
 	if !noHeader {
 		table = textutil.AddTableHeader(table, passwordHeader)
 	}
@@ -424,10 +424,12 @@ func (box *Box) colorID(w io.Writer, hasHeader bool) textutil.TableStyler {
 	return colorIDStyle{hasHeader: hasHeader}
 }
 
-func (box *Box) sortedPasswords() []Password {
+func (box *Box) sortedPasswords(showHidden bool) []Password {
 	passwords := make([]Password, 0, len(box.passwords))
 	for _, pw := range box.passwords {
-		passwords = append(passwords, *pw)
+		if showHidden || !pw.Hidden {
+			passwords = append(passwords, *pw)
+		}
 	}
 	sort.Sort(passwordSlice(passwords))
 	return passwords
@@ -449,7 +451,7 @@ func (box *Box) marshal() ([]byte, error) {
 	if err := box.encryptAll(); err != nil {
 		return nil, err
 	}
-	box.store.Passwords = box.sortedPasswords()
+	box.store.Passwords = box.sortedPasswords(true)
 	return json.MarshalIndent(box.store, "", "    ")
 }
 

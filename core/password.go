@@ -39,6 +39,9 @@ type PasswordBasic struct {
 
 	// Extension information: JSON base64 string
 	Ext string `cli:"-"`
+
+	// Hidden ...
+	Hidden bool `cli:"H,hidden" usage:"is a hidden password?"`
 }
 
 // Password represents entity of password
