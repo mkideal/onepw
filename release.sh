@@ -17,7 +17,7 @@ fi
 mkdir $version
 
 ##
-cat > version.go <<EOF
+cat > ./command/version.go <<EOF
 package main
 
 const appVersion = "$version"
