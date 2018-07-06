@@ -13,16 +13,19 @@ onepw is a command line tool for managing passwords, provides `init`,`add`,`remo
 
 ## Principles
 
-1) Generate Key by master password
+1. Generate Key by master password
 
+```
 	o--------o             o-----o
 	| Master | KDF: scrypt |     |
 	| Pass   |============>| Key |
 	| Word   |             |     |
 	o--------o             o-----o
+```
 
-2) Encrypt account and password
+2. Encrypt account and password
 
+```
 	o-----------o
 	|           |
 	| Random IV |==o
@@ -34,19 +37,20 @@ onepw is a command line tool for managing passwords, provides `init`,`add`,`remo
 	| PlainText |==o
 	|           |
 	o-----------o
+```
 
 ## Commands
 
-* help - `display help`
-* version - `display version`
-* init - `init password box or modify master password`
-* add - `add a new password or update old password`
-* remove - `remove passwords by ids or (category,account)(aliases rm,del,delete)`
-* list - `list all passwords(aliases ls)`
-* find - `find password by id,category,account,tag,site and so on`
-* upgrade - `upgrade to newest version(aliases up)`
+* help     - `display help`
+* version  - `display version`
+* init     - `init password box or modify master password`
+* add      - `add a new password or update old password`
+* remove   - `remove passwords by ids or (category,account)(aliases rm,del,delete)`
+* list     - `list all passwords(aliases ls)`
+* find     - `find password by id,category,account,tag,site and so on`
+* upgrade  - `upgrade to newest version(aliases up)`
 * generate - `a utility command for generating password(aliases gen)`
-* info - `show low-level information of password`
+* info     - `show low level information of password`
 
 ### help - `show help information`
 
