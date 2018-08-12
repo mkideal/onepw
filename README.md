@@ -1,6 +1,6 @@
 # onepw [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/mkideal/onepw/master/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/mkideal/onepw)](https://goreportcard.com/report/github.com/mkideal/onepw)
 
-![screenshot.png](http://www.mkideal.com/images/onepw-screenshot.png)
+![screenshot.png](http://www.mkideal.com/assets/images/onepw/screenshot.png)
 
 ## Install
 
