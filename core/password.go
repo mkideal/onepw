@@ -25,23 +25,23 @@ type passwordInspect struct {
 // PasswordBasic is basic of Password
 type PasswordBasic struct {
 	// Category of password
-	Category string `cli:"c,category" usage:"category of password"`
+	Category string `cli:"c,category" usage:"Category of password"`
 
 	// Plain account and password
-	PlainAccount  string `json:"-" cli:"u,account" usage:"account of password"`
+	PlainAccount  string `json:"-" cli:"u,account" usage:"Account of password"`
 	PlainPassword string `json:"-" cli:"-"`
 
 	// Website address for web password
-	Site string `cli:"site" usage:"website of password"`
+	Site string `cli:"site" usage:"Website of password"`
 
 	// Password tags
-	Tags []string `cli:"tag" usage:"tags of password"`
+	Tags []string `cli:"tag" usage:"Tags of password"`
 
 	// Extension information: JSON base64 string
 	Ext string `cli:"-"`
 
 	// Hidden ...
-	Hidden bool `cli:"H,hidden" usage:"is a hidden password?"`
+	Hidden bool `cli:"H,hidden" usage:"Whether to hide the password" dft:"false"`
 }
 
 // Password represents entity of password
@@ -49,7 +49,7 @@ type Password struct {
 	PasswordBasic
 
 	// Unique id of password
-	ID string `cli:"id" usage:"password id for updating"`
+	ID string `cli:"id" usage:"Password id for updating"`
 
 	// IVs
 	AccountIV  []byte `cli:"-"`

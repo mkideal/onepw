@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	cli.SetUsageStyle(cli.ManualStyle)
+	cli.SetUsageStyle(cli.NormalStyle)
 	if err := command.Exec(os.Args[1:]); err != nil {
 		fmt.Fprintln(colorable.NewColorableStderr(), err)
 		os.Exit(1)

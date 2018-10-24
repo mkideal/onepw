@@ -1,13 +1,9 @@
 package command
 
 import (
-	"bytes"
-	"crypto/rand"
 	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/Bowery/prompt"
@@ -32,7 +28,6 @@ func init() {
 		cli.Tree(list),
 		cli.Tree(find),
 		cli.Tree(upgrade),
-		cli.Tree(generate),
 		cli.Tree(info),
 	)
 }
@@ -50,8 +45,8 @@ type Configure interface {
 
 // Config implementes Configure interface, represents onepw config
 type Config struct {
-	Master      string `pw:"master" usage:"master password" dft:"$ONEPW_MASTER" prompt:"type the master password"`
-	EnableDebug bool   `cli:"debug" usage:"usage debug mode" dft:"false"`
+	Master      string `pw:"master" usage:"Your master password" dft:"$ONEPW_MASTER" prompt:"Type the master password"`
+	EnableDebug bool   `cli:"debug" usage:"Enable debug mode" dft:"false"`
 }
 
 // Filename returns password data filename
@@ -80,8 +75,8 @@ var box *core.Box
 //--------------
 
 type rootT struct {
-	cli.Helper
-	Version bool `cli:"!v,version" usage:"display version information"`
+	cli.Helper2
+	Version bool `cli:"!v,version" usage:"Display version information"`
 }
 
 var root = &cli.Command{
@@ -130,7 +125,7 @@ var root = &cli.Command{
 // help command
 //--------------
 
-var help = cli.HelpCommand("display help")
+var help = cli.HelpCommand("Display help information")
 
 //-----------------
 // version command
@@ -138,7 +133,7 @@ var help = cli.HelpCommand("display help")
 
 var version = &cli.Command{
 	Name:   "version",
-	Desc:   "display version",
+	Desc:   "Display version information",
 	NoHook: true,
 
 	Fn: func(ctx *cli.Context) error {
@@ -151,9 +146,9 @@ var version = &cli.Command{
 // init command
 //--------------
 type initT struct {
-	cli.Helper
+	cli.Helper2
 	Config
-	Update bool `cli:"u,update" usage:"whether update master password" dft:"false"`
+	Update bool `cli:"u,update" usage:"Whether to update the master password" dft:"false"`
 }
 
 func (argv *initT) Validate(ctx *cli.Context) error {
@@ -165,7 +160,7 @@ func (argv *initT) Validate(ctx *cli.Context) error {
 
 var initCmd = &cli.Command{
 	Name: "init",
-	Desc: "init password box or modify master password",
+	Desc: "Init password box or change the master password",
 	Argv: func() interface{} { return new(initT) },
 
 	OnBefore: func(ctx *cli.Context) error {
@@ -173,7 +168,7 @@ var initCmd = &cli.Command{
 		if argv.Update {
 			return nil
 		}
-		cpw, err := prompt.Password("repeat the master password: ")
+		cpw, err := prompt.Password("Repeat the master password: ")
 		if err != nil {
 			return err
 		}
@@ -202,11 +197,11 @@ var initCmd = &cli.Command{
 	Fn: func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*initT)
 		if argv.Update {
-			pw, err := prompt.Password("type the new master password: ")
+			pw, err := prompt.Password("Type a new master password:")
 			if err != nil {
 				return err
 			}
-			cpw, err := prompt.Password("repeat the new master password: ")
+			cpw, err := prompt.Password("Repeat the new master password:")
 			if err != nil {
 				return err
 			}
@@ -223,11 +218,11 @@ var initCmd = &cli.Command{
 // add command
 //-------------
 type addT struct {
-	cli.Helper
+	cli.Helper2
 	Config
 	core.Password
-	Pw  string `pw:"pw,password" usage:"the password" prompt:"type the password"`
-	Cpw string `pw:"cpw,confirm-password" usage:"confirm password" prompt:"repeat the password"`
+	Pw  string `pw:"p,password" usage:"The password you decided to use" name:"PASSWORD" prompt:"Type the password"`
+	Cpw string `pw:"C,confirm" usage:"Confirm password which must be same as PASSWORD" prompt:"Repeat the password"`
 }
 
 func (argv *addT) Validate(ctx *cli.Context) error {
@@ -239,7 +234,7 @@ func (argv *addT) Validate(ctx *cli.Context) error {
 
 var add = &cli.Command{
 	Name: "add",
-	Desc: "add a new password or update old password",
+	Desc: "Add a new password or update(while with --id parameter) the old password",
 	Argv: func() interface{} {
 		argv := new(addT)
 		argv.Password = *core.NewEmptyPassword()
@@ -267,16 +262,16 @@ var add = &cli.Command{
 //--------
 
 type removeT struct {
-	cli.Helper
+	cli.Helper2
 	Config
-	All bool `cli:"a,all" usage:"remove all found passwords" dft:"false"`
+	All bool `cli:"a,all" usage:"Remove all found passwords" dft:"false"`
 }
 
 var remove = &cli.Command{
 	Name:        "remove",
 	Aliases:     []string{"rm", "del", "delete"},
-	Desc:        "remove passwords by ids or (category,account)",
-	Text:        "Usage: onepw rm [ids...] [OPTIONS]",
+	Desc:        "Remove passwords by IDs or (category,account)",
+	Text:        "Usage: onepw rm [IDs...] [OPTIONS]",
 	Argv:        func() interface{} { return new(removeT) },
 	CanSubRoute: true,
 
@@ -308,16 +303,16 @@ var remove = &cli.Command{
 //------
 
 type listT struct {
-	cli.Helper
+	cli.Helper2
 	Config
-	NoHeader   bool `cli:"no-header" usage:"don't print header line" dft:"false"`
-	ShowHidden bool `cli:"H,hidden" usage:"whether list hidden passwords"`
+	NoHeader   bool `cli:"no-header" usage:"Don't print header line" dft:"false"`
+	ShowHidden bool `cli:"H,hidden" usage:"Whether to list hidden passwords"`
 }
 
 var list = &cli.Command{
 	Name:    "list",
 	Aliases: []string{"ls"},
-	Desc:    "list all passwords",
+	Desc:    "List all passwords",
 	Argv:    func() interface{} { return new(listT) },
 
 	Fn: func(ctx *cli.Context) error {
@@ -331,15 +326,15 @@ var list = &cli.Command{
 //--------------
 
 type findT struct {
-	cli.Helper
+	cli.Helper2
 	Config
-	JustPassword bool `cli:"p,just-password" usage:"only show password" dft:"false"`
-	JustFirst    bool `cli:"f,just-first" usage:"only show first result" dft:"false"`
+	JustPassword bool `cli:"p,just-password" usage:"Just show password" dft:"false"`
+	JustFirst    bool `cli:"f,just-first" usage:"Just show first result" dft:"false"`
 }
 
 var find = &cli.Command{
 	Name:        "find",
-	Desc:        "find password by id,category,account,tag,site and so on",
+	Desc:        "Find password by ID,category,account,tag or site and so on",
 	Text:        "Usage: onepw find <WORD>",
 	Argv:        func() interface{} { return new(findT) },
 	CanSubRoute: true,
@@ -364,14 +359,14 @@ var find = &cli.Command{
 //-----------------
 
 type upgradeT struct {
-	cli.Helper
+	cli.Helper2
 	Config
 }
 
 var upgrade = &cli.Command{
 	Name:    "upgrade",
 	Aliases: []string{"up"},
-	Desc:    "upgrade to newest version",
+	Desc:    "Upgrade to newest version",
 	Argv:    func() interface{} { return new(upgradeT) },
 
 	Fn: func(ctx *cli.Context) error {
@@ -384,119 +379,20 @@ var upgrade = &cli.Command{
 	},
 }
 
-//------------------
-// generate command
-//------------------
-type generateT struct {
-	cli.Helper
-	Num                uint16 `cli:"n,number" usage:"number of generated passwords" dft:"1" name:"N"`
-	ContainDigit       bool   `cli:"d,digit" usage:"whether the password contains digit" dft:"false"`
-	ContainLowerChar   bool   `cli:"c,lower-char" usage:"whether the password contains lowercase character" dft:"false"`
-	ContainUpperChar   bool   `cli:"C,upper-char" usage:"whether the password contains uppercase character" dft:"false"`
-	ContainSpecialChar bool   `cli:"s,special-char" usage:"whether the password contains the special character" dft:"false"`
-	SpecialCharSet     string `cli:"sset,special-set" usage:"custom special character set"`
-
-	length int `cli:"-"`
-}
-
-var (
-	digits         = []byte("0123456789")
-	lowercaseChars = []byte("abcdefghijklmnopqrstuvwxyz")
-	uppercaseChars = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	specialChars   = []byte("~!@#$%^&*")
-)
-
-func (argv *generateT) Validate(ctx *cli.Context) error {
-	if argv.Num == 0 {
-		return fmt.Errorf("N must > 0")
-	}
-	args := ctx.Args()
-	if len(args) == 1 {
-		length, err := strconv.Atoi(args[0])
-		if err != nil {
-			return fmt.Errorf("LEN must be a number")
-		}
-		if length <= 0 {
-			return fmt.Errorf("LEN must > 0")
-		}
-		argv.length = length
-	}
-
-	return nil
-}
-
-var generate = &cli.Command{
-	Name:        "generate",
-	Aliases:     []string{"gen"},
-	Desc:        "a utility command for generating password",
-	Text:        "Usage: onepw generate [OPTIONS] LEN",
-	Argv:        func() interface{} { return new(generateT) },
-	NoHook:      true,
-	CanSubRoute: true,
-
-	Fn: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*generateT)
-		if argv.Help || len(ctx.Args()) != 1 {
-			ctx.WriteUsage()
-			return nil
-		}
-		if !argv.ContainDigit && !argv.ContainLowerChar && !argv.ContainUpperChar && !argv.ContainSpecialChar {
-			argv.ContainDigit = true
-			argv.ContainLowerChar = true
-			argv.ContainUpperChar = true
-		}
-
-		charSetBuff := bytes.NewBufferString("")
-		if argv.ContainDigit {
-			charSetBuff.Write(digits)
-		}
-		if argv.ContainLowerChar {
-			charSetBuff.Write(lowercaseChars)
-		}
-		if argv.ContainUpperChar {
-			charSetBuff.Write(uppercaseChars)
-		}
-		if argv.ContainSpecialChar {
-			if argv.SpecialCharSet == "" {
-				charSetBuff.Write(specialChars)
-			} else {
-				charSetBuff.WriteString(argv.SpecialCharSet)
-			}
-		}
-		charSetLength := charSetBuff.Len()
-		if charSetLength == 0 {
-			return fmt.Errorf("charset is empty")
-		}
-		charSet := charSetBuff.Bytes()
-		for i := 0; i < int(argv.Num); i++ {
-			pw := make([]byte, argv.length)
-			for j := 0; j < argv.length; j++ {
-				index, err := rand.Int(rand.Reader, big.NewInt(int64(charSetLength)))
-				if err != nil {
-					return err
-				}
-				pw[j] = charSet[int(index.Int64())]
-			}
-			ctx.Write(pw)
-			ctx.Write([]byte{'\n'})
-		}
-		return nil
-	},
-}
-
 //--------------
 // info command
 //--------------
 type infoT struct {
-	cli.Helper
+	cli.Helper2
 	Config
 	All bool `cli:"a,all" usage:"show all found passwords"`
 }
 
 var info = &cli.Command{
-	Name:        "info",
-	Desc:        "show low-level information of password",
-	Text:        "Usage: onepw info <ids...>",
+	Name:        "show",
+	Aliases:     []string{"info"},
+	Desc:        "Show low-level information of password",
+	Text:        "Usage: onepw show <IDs...>",
 	Argv:        func() interface{} { return new(infoT) },
 	CanSubRoute: true,
 	NumArg:      cli.AtLeast(1),
