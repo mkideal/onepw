@@ -585,6 +585,18 @@ func (box *Box) decrypt(pw *Password, dk []byte) error {
 	return nil
 }
 
+func shorten(s string, n int) string {
+	var padding = " ..."
+	var paddingSize = len(padding)
+	if n <= paddingSize {
+		n = paddingSize + 1
+	}
+	if len(s) > n {
+		return s[:n-paddingSize] + padding
+	}
+	return s
+}
+
 // sort passwords by Id
 type passwordSlice []Password
 
@@ -599,7 +611,7 @@ func (ps passwordSlice) ColCount() int {
 	return ps[0].colCount()
 }
 func (ps passwordSlice) Get(i, j int) string {
-	return ps[i].get(j)
+	return shorten(ps[i].get(j), 32)
 }
 
 type passwordPtrSlice []*Password
@@ -615,5 +627,5 @@ func (ps passwordPtrSlice) ColCount() int {
 	return ps[0].colCount()
 }
 func (ps passwordPtrSlice) Get(i, j int) string {
-	return ps[i].get(j)
+	return shorten(ps[i].get(j), 32)
 }

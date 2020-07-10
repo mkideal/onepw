@@ -98,9 +98,6 @@ func (pw Password) match(word string) bool {
 	if strings.Contains(pw.PlainAccount, word) {
 		return true
 	}
-	if strings.Contains(pw.PlainPassword, word) {
-		return true
-	}
 	if strings.Contains(pw.Site, word) {
 		return true
 	}

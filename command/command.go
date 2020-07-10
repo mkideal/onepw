@@ -6,29 +6,30 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Bowery/prompt"
 	"github.com/labstack/gommon/color"
 	"github.com/mkideal/cli"
 	"github.com/mkideal/onepw/core"
+	"github.com/mkideal/pkg/build"
 	"github.com/mkideal/pkg/debug"
+	"github.com/mkideal/pkg/prompt"
 	"github.com/mkideal/pkg/textutil"
 )
 
 func Exec(args []string) error {
-	return root.Run(args)
+	return rootCommand.Run(args)
 }
 
 func init() {
-	root = cli.Root(root,
-		cli.Tree(help),
-		cli.Tree(version),
-		cli.Tree(initCmd),
-		cli.Tree(add),
-		cli.Tree(remove),
-		cli.Tree(list),
-		cli.Tree(find),
-		cli.Tree(upgrade),
-		cli.Tree(info),
+	rootCommand = cli.Root(rootCommand,
+		cli.Tree(helpCommand),
+		cli.Tree(versionCommand),
+		cli.Tree(initCommand),
+		cli.Tree(setCommand),
+		cli.Tree(removeCommand),
+		cli.Tree(listCommand),
+		cli.Tree(findCommand),
+		cli.Tree(upgradeCommand),
+		cli.Tree(infoCommand),
 	)
 }
 
@@ -74,12 +75,12 @@ var box *core.Box
 // root command
 //--------------
 
-type rootT struct {
+type rootCommandT struct {
 	cli.Helper2
 	Version bool `cli:"!v,version" usage:"Display version information"`
 }
 
-var root = &cli.Command{
+var rootCommand = &cli.Command{
 	Name: os.Args[0],
 	Desc: textutil.Tpl("{{.onepw}} is a command line tool for managing passwords, open-source on {{.repo}}", map[string]string{
 		"onepw": color.Bold("onepw"),
@@ -89,13 +90,13 @@ var root = &cli.Command{
 		"onepw": color.Bold("onepw"),
 		"usage": color.Bold("Usage"),
 	}),
-	Argv:   func() interface{} { return new(rootT) },
+	Argv:   func() interface{} { return new(rootCommandT) },
 	NumArg: cli.AtLeast(1),
 
 	OnBefore: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*rootT)
+		argv := ctx.Argv().(*rootCommandT)
 		if argv.Version {
-			ctx.String("%s\n", appVersion)
+			ctx.String("%s\n", build.String("onepw"))
 			return cli.ExitError
 		}
 		return nil
@@ -125,19 +126,19 @@ var root = &cli.Command{
 // help command
 //--------------
 
-var help = cli.HelpCommand("Display help information")
+var helpCommand = cli.HelpCommand("Display help information")
 
 //-----------------
 // version command
 //-----------------
 
-var version = &cli.Command{
+var versionCommand = &cli.Command{
 	Name:   "version",
 	Desc:   "Display version information",
 	NoHook: true,
 
 	Fn: func(ctx *cli.Context) error {
-		ctx.String(appVersion + "\n")
+		ctx.String("%s\n", build.String("onepw"))
 		return nil
 	},
 }
@@ -145,26 +146,26 @@ var version = &cli.Command{
 //--------------
 // init command
 //--------------
-type initT struct {
+type initCommandT struct {
 	cli.Helper2
 	Config
 	Update bool `cli:"u,update" usage:"Whether to update the master password" dft:"false"`
 }
 
-func (argv *initT) Validate(ctx *cli.Context) error {
+func (argv *initCommandT) Validate(ctx *cli.Context) error {
 	if argv.Filename() == "" {
 		return fmt.Errorf("FILE is empty")
 	}
 	return nil
 }
 
-var initCmd = &cli.Command{
+var initCommand = &cli.Command{
 	Name: "init",
 	Desc: "Init password box or change the master password",
-	Argv: func() interface{} { return new(initT) },
+	Argv: func() interface{} { return new(initCommandT) },
 
 	OnBefore: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*initT)
+		argv := ctx.Argv().(*initCommandT)
 		if argv.Update {
 			return nil
 		}
@@ -173,7 +174,7 @@ var initCmd = &cli.Command{
 			return err
 		}
 		if argv.Master != string(cpw) {
-			return fmt.Errorf(ctx.Color().Red("master password mismatch"))
+			return fmt.Errorf(ctx.Color().Red("master password mismatched"))
 		}
 
 		if _, err := os.Lstat(argv.Filename()); err != nil {
@@ -195,18 +196,18 @@ var initCmd = &cli.Command{
 	},
 
 	Fn: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*initT)
+		argv := ctx.Argv().(*initCommandT)
 		if argv.Update {
-			pw, err := prompt.Password("Type a new master password:")
+			pw, err := prompt.Password("Type a new master password: ")
 			if err != nil {
 				return err
 			}
-			cpw, err := prompt.Password("Repeat the new master password:")
+			cpw, err := prompt.Password("Repeat the new master password: ")
 			if err != nil {
 				return err
 			}
 			if string(pw) != string(cpw) {
-				return fmt.Errorf(ctx.Color().Red("new master password mismatch"))
+				return fmt.Errorf(ctx.Color().Red("new master password mismatched"))
 			}
 			return box.Update(string(pw))
 		}
@@ -215,9 +216,9 @@ var initCmd = &cli.Command{
 }
 
 //-------------
-// add command
+// set command
 //-------------
-type addT struct {
+type setCommandT struct {
 	cli.Helper2
 	Config
 	core.Password
@@ -225,24 +226,25 @@ type addT struct {
 	Cpw string `pw:"C,confirm" usage:"Confirm password which must be same as PASSWORD" prompt:"Repeat the password"`
 }
 
-func (argv *addT) Validate(ctx *cli.Context) error {
+func (argv *setCommandT) Validate(ctx *cli.Context) error {
 	if argv.Pw != argv.Cpw {
-		return fmt.Errorf("2 passwords mismatch")
+		return fmt.Errorf("passwords mismatched")
 	}
 	return core.CheckPassword(argv.Pw)
 }
 
-var add = &cli.Command{
-	Name: "add",
-	Desc: "Add a new password or update(while with --id parameter) the old password",
+var setCommand = &cli.Command{
+	Name:    "set",
+	Desc:    "Set password (add a new password or update the old password)",
+	Aliases: []string{"add"},
 	Argv: func() interface{} {
-		argv := new(addT)
+		argv := new(setCommandT)
 		argv.Password = *core.NewEmptyPassword()
 		return argv
 	},
 
 	Fn: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*addT)
+		argv := ctx.Argv().(*setCommandT)
 		argv.Password.PlainPassword = argv.Pw
 		id, new, err := box.Add(&argv.Password)
 		if err != nil {
@@ -261,23 +263,23 @@ var add = &cli.Command{
 // remove
 //--------
 
-type removeT struct {
+type removeCommandT struct {
 	cli.Helper2
 	Config
 	All bool `cli:"a,all" usage:"Remove all found passwords" dft:"false"`
 }
 
-var remove = &cli.Command{
+var removeCommand = &cli.Command{
 	Name:        "remove",
 	Aliases:     []string{"rm", "del", "delete"},
 	Desc:        "Remove passwords by IDs or (category,account)",
 	Text:        "Usage: onepw rm [IDs...] [OPTIONS]",
-	Argv:        func() interface{} { return new(removeT) },
+	Argv:        func() interface{} { return new(removeCommandT) },
 	CanSubRoute: true,
 
 	Fn: func(ctx *cli.Context) error {
 		var (
-			argv       = ctx.Argv().(*removeT)
+			argv       = ctx.Argv().(*removeCommandT)
 			deletedIds []string
 			err        error
 			ids        = ctx.Args()
@@ -302,21 +304,21 @@ var remove = &cli.Command{
 // list
 //------
 
-type listT struct {
+type listCommandT struct {
 	cli.Helper2
 	Config
 	NoHeader   bool `cli:"no-header" usage:"Don't print header line" dft:"false"`
 	ShowHidden bool `cli:"H,hidden" usage:"Whether to list hidden passwords"`
 }
 
-var list = &cli.Command{
+var listCommand = &cli.Command{
 	Name:    "list",
 	Aliases: []string{"ls"},
 	Desc:    "List all passwords",
-	Argv:    func() interface{} { return new(listT) },
+	Argv:    func() interface{} { return new(listCommandT) },
 
 	Fn: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*listT)
+		argv := ctx.Argv().(*listCommandT)
 		return box.List(ctx, argv.NoHeader, argv.ShowHidden)
 	},
 }
@@ -325,18 +327,18 @@ var list = &cli.Command{
 // find command
 //--------------
 
-type findT struct {
+type findCommandT struct {
 	cli.Helper2
 	Config
 	JustPassword bool `cli:"p,just-password" usage:"Just show password" dft:"false"`
 	JustFirst    bool `cli:"f,just-first" usage:"Just show first result" dft:"false"`
 }
 
-var find = &cli.Command{
+var findCommand = &cli.Command{
 	Name:        "find",
 	Desc:        "Find password by ID,category,account,tag or site and so on",
 	Text:        "Usage: onepw find <WORD>",
-	Argv:        func() interface{} { return new(findT) },
+	Argv:        func() interface{} { return new(findCommandT) },
 	CanSubRoute: true,
 
 	OnBefore: func(ctx *cli.Context) error {
@@ -348,7 +350,7 @@ var find = &cli.Command{
 	},
 
 	Fn: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*findT)
+		argv := ctx.Argv().(*findCommandT)
 		box.Find(ctx, ctx.Args()[0], argv.JustPassword, argv.JustFirst)
 		return nil
 	},
@@ -358,16 +360,16 @@ var find = &cli.Command{
 // upgrade command
 //-----------------
 
-type upgradeT struct {
+type upgradeCommandT struct {
 	cli.Helper2
 	Config
 }
 
-var upgrade = &cli.Command{
+var upgradeCommand = &cli.Command{
 	Name:    "upgrade",
 	Aliases: []string{"up"},
 	Desc:    "Upgrade to newest version",
-	Argv:    func() interface{} { return new(upgradeT) },
+	Argv:    func() interface{} { return new(upgradeCommandT) },
 
 	Fn: func(ctx *cli.Context) error {
 		from, to, err := box.Upgrade()
@@ -382,23 +384,23 @@ var upgrade = &cli.Command{
 //--------------
 // info command
 //--------------
-type infoT struct {
+type infoCommandT struct {
 	cli.Helper2
 	Config
 	All bool `cli:"a,all" usage:"show all found passwords"`
 }
 
-var info = &cli.Command{
+var infoCommand = &cli.Command{
 	Name:        "show",
 	Aliases:     []string{"info"},
 	Desc:        "Show low-level information of password",
 	Text:        "Usage: onepw show <IDs...>",
-	Argv:        func() interface{} { return new(infoT) },
+	Argv:        func() interface{} { return new(infoCommandT) },
 	CanSubRoute: true,
 	NumArg:      cli.AtLeast(1),
 
 	Fn: func(ctx *cli.Context) error {
-		argv := ctx.Argv().(*infoT)
+		argv := ctx.Argv().(*infoCommandT)
 		return box.Inspect(ctx, ctx.Args(), argv.All)
 	},
 }
