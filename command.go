@@ -1,4 +1,4 @@
-package command
+package main
 
 import (
 	"fmt"
@@ -15,14 +15,9 @@ import (
 	"github.com/mkideal/pkg/textutil"
 )
 
-func Exec(args []string) error {
-	return rootCommand.Run(args)
-}
-
 func init() {
 	rootCommand = cli.Root(rootCommand,
 		cli.Tree(helpCommand),
-		cli.Tree(versionCommand),
 		cli.Tree(initCommand),
 		cli.Tree(setCommand),
 		cli.Tree(removeCommand),
@@ -127,21 +122,6 @@ var rootCommand = &cli.Command{
 //--------------
 
 var helpCommand = cli.HelpCommand("Display help information")
-
-//-----------------
-// version command
-//-----------------
-
-var versionCommand = &cli.Command{
-	Name:   "version",
-	Desc:   "Display version information",
-	NoHook: true,
-
-	Fn: func(ctx *cli.Context) error {
-		ctx.String("%s\n", build.String("onepw"))
-		return nil
-	},
-}
 
 //--------------
 // init command

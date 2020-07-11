@@ -402,7 +402,12 @@ func (box *Box) Find(w io.Writer, word string, justPassword, justFirst bool) err
 		}
 		return nil
 	}
-	textutil.WriteTable(w, table, box.colorID(w, false))
+	var t textutil.Table
+	t = table
+	if !justFirst {
+		t = textutil.AddTableHeader(table, passwordHeader)
+	}
+	textutil.WriteTable(w, t, box.colorID(w, !justFirst))
 	return nil
 }
 
